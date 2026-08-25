@@ -1,0 +1,1007 @@
+/* ============================================================================
+   Warba Bank — AI-Powered Client Documentation
+   Design system
+
+   The visual language answers a specific problem: an RM must be able to tell,
+   at a glance, which parts of a generated document are grounded and which are
+   not. So the palette is deliberately restrained — a calm teal-and-paper base
+   that lets three signals carry all the visual weight:
+
+     · amber   → a gap, or low confidence. Something needs your attention.
+     · red     → blocked. The system refused; nothing was produced.
+     · green   → approved. A human took responsibility.
+
+   Everything else recedes. If a new UI element competes with those three for
+   attention, it is the new element that is wrong.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- tokens */
+
+:root {
+  /* Brand — Warba's deep teal, with a tint ramp for surfaces */
+  --brand-900: #003d33;
+  --brand-800: #00473c;
+  --brand-700: #00584a;
+  --brand-600: #006a5b;
+  --brand-500: #00806d;
+  --brand-100: #d7e9e5;
+  --brand-50:  #eef6f4;
+
+  /* Accent — used once per screen at most. Gold reads as "seal", not decoration. */
+  --gold-600: #a8871f;
+  --gold-500: #c9a227;
+  --gold-100: #f7efd6;
+
+  /* Ink & paper */
+  --ink-900: #10161c;
+  --ink-800: #1c242c;
+  --ink-700: #333f4a;
+  --ink-500: #5b6672;
+  --ink-400: #7d8892;
+  --ink-300: #a8b1ba;
+
+  --paper:   #ffffff;
+  --canvas:  #f5f7f8;
+  --canvas-2:#eceff1;
+  --line:    #dde3e8;
+  --line-2:  #eaeef1;
+
+  /* Semantic — the three signals */
+  --warn-700: #7a4700;
+  --warn-600: #9a5b00;
+  --warn-100: #fff4e0;
+  --warn-line:#f0d9ac;
+
+  --danger-700: #851624;
+  --danger-600: #a01b2b;
+  --danger-100: #fdecee;
+  --danger-line:#f3c4ca;
+
+  --ok-700: #14512f;
+  --ok-600: #1c6b3f;
+  --ok-100: #e6f5ec;
+  --ok-line:#b9dfc8;
+
+  /* Elevation — soft, low-spread. Banking UI should feel like paper, not glass. */
+  --shadow-xs: 0 1px 2px rgba(16, 22, 28, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 22, 28, 0.07), 0 1px 2px rgba(16, 22, 28, 0.04);
+  --shadow-md: 0 4px 12px rgba(16, 22, 28, 0.08), 0 2px 4px rgba(16, 22, 28, 0.04);
+  --shadow-lg: 0 12px 32px rgba(16, 22, 28, 0.12), 0 4px 8px rgba(16, 22, 28, 0.06);
+  --shadow-brand: 0 4px 14px rgba(0, 88, 74, 0.22);
+
+  --r-sm: 5px;
+  --r:    8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --t-fast: 120ms;
+  --t: 200ms;
+  --t-slow: 380ms;
+
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ------------------------------------------------------------------ base */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-800);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5 {
+  margin: 0 0 0.5rem;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.011em;
+  color: var(--ink-900);
+}
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.05rem; }
+h4 { font-size: 0.95rem; }
+h5 { font-size: 0.8rem; }
+
+p { margin: 0 0 0.75rem; }
+p:last-child { margin-bottom: 0; }
+
+code { font-family: var(--mono); font-size: 0.86em; }
+
+.muted { color: var(--ink-500); }
+.error { color: var(--danger-600); font-weight: 500; }
+
+::selection { background: var(--brand-100); color: var(--brand-900); }
+
+:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* --------------------------------------------------------------- motion */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position: 400px 0; }
+}
+@keyframes pulse-warn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(154, 91, 0, 0.18); }
+  50%      { box-shadow: 0 0 0 5px rgba(154, 91, 0, 0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes dots {
+  0%, 20%  { content: "·  "; }
+  40%      { content: "·· "; }
+  60%, 100%{ content: "···"; }
+}
+
+/* Anyone who has asked the OS to reduce motion gets none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -------------------------------------------------------------- controls */
+
+button {
+  font: inherit;
+  font-weight: 550;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--paper);
+  color: var(--ink-800);
+  cursor: pointer;
+  transition:
+    background var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    box-shadow var(--t) var(--ease),
+    transform var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+  box-shadow: var(--shadow-xs);
+  white-space: nowrap;
+}
+button:hover:not(:disabled) {
+  border-color: var(--brand-500);
+  color: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+button:active:not(:disabled) { transform: translateY(0); box-shadow: var(--shadow-xs); }
+button:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+.button--primary {
+  background: linear-gradient(180deg, var(--brand-600), var(--brand-700));
+  border-color: var(--brand-700);
+  color: #fff;
+  box-shadow: var(--shadow-brand);
+}
+.button--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--brand-500), var(--brand-600));
+  border-color: var(--brand-600);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 88, 74, 0.3);
+}
+.button--primary:disabled { background: var(--ink-300); border-color: var(--ink-300); }
+
+.link {
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 0.2rem 0;
+  color: var(--brand-600);
+  font-weight: 550;
+  transition: color var(--t-fast) var(--ease);
+}
+.link:hover:not(:disabled) {
+  color: var(--brand-800);
+  transform: none;
+  box-shadow: none;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+input, textarea, select {
+  font: inherit;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--paper);
+  color: var(--ink-900);
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-300); }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px var(--brand-100);
+}
+textarea { resize: vertical; line-height: 1.65; min-height: 6rem; }
+
+input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--brand-600);
+  cursor: pointer;
+}
+
+/* ----------------------------------------------------------------- shell */
+
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.app__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1.75rem;
+  background: linear-gradient(135deg, var(--brand-800) 0%, var(--brand-700) 55%, var(--brand-600) 100%);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.app__brand {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.98rem;
+}
+/* A small gold seal — the only place the accent appears in the chrome. */
+.app__brand::before {
+  content: "";
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(140deg, var(--gold-500), var(--gold-600));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+  flex: none;
+}
+
+.app__user {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.88rem;
+}
+.app__role {
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.14);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.app__user .link { color: rgba(255,255,255,0.88); }
+.app__user .link:hover { color: #fff; }
+
+/* Principle VII, said out loud where users can see it. */
+.app__synthetic-notice {
+  background: var(--warn-100);
+  color: var(--warn-700);
+  border-bottom: 1px solid var(--warn-line);
+  padding: 0.45rem 1.75rem;
+  font-size: 0.82rem;
+  font-weight: 550;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  animation: fade var(--t-slow) var(--ease);
+}
+.app__synthetic-notice::before { content: "🔒"; font-size: 0.9em; }
+
+main {
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.75rem 4rem;
+  flex: 1;
+  animation: rise var(--t-slow) var(--ease) both;
+}
+
+/* ----------------------------------------------------------------- login */
+
+.login {
+  max-width: 400px;
+  padding-top: 8vh;
+  animation: pop var(--t-slow) var(--ease) both;
+}
+.login h1 {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.login h1::before {
+  content: "";
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(140deg, var(--brand-600), var(--brand-800));
+  box-shadow: var(--shadow-brand);
+  flex: none;
+}
+.login__subtitle { color: var(--ink-500); margin-bottom: 2rem; font-size: 0.92rem; }
+
+.login form {
+  display: grid;
+  gap: 1.1rem;
+  background: var(--paper);
+  padding: 1.75rem;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+}
+.login label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.88rem; }
+.login__notice {
+  margin-top: 1.5rem;
+  font-size: 0.82rem;
+  color: var(--ink-500);
+  text-align: center;
+  padding: 0.7rem;
+  background: var(--brand-50);
+  border-radius: var(--r);
+  border: 1px solid var(--brand-100);
+}
+
+/* ------------------------------------------------------------- portfolio */
+
+.portfolio > input[type="search"] {
+  max-width: 380px;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.portfolio__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+.portfolio__list li { animation: rise var(--t-slow) var(--ease) both; }
+/* Staggered entry — the list assembles rather than appearing all at once. */
+.portfolio__list li:nth-child(1) { animation-delay: 0ms; }
+.portfolio__list li:nth-child(2) { animation-delay: 45ms; }
+.portfolio__list li:nth-child(3) { animation-delay: 90ms; }
+.portfolio__list li:nth-child(4) { animation-delay: 135ms; }
+.portfolio__list li:nth-child(5) { animation-delay: 180ms; }
+.portfolio__list li:nth-child(n+6) { animation-delay: 220ms; }
+
+.portfolio__list button {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.4rem 1.25rem;
+  align-items: baseline;
+  padding: 1rem 1.15rem;
+  border-radius: var(--r-lg);
+  position: relative;
+  overflow: hidden;
+}
+/* A teal edge that grows in on hover — reads as "selectable row". */
+.portfolio__list button::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--brand-500);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform var(--t) var(--ease);
+}
+.portfolio__list button:hover::before { transform: scaleY(1); }
+.portfolio__list button:hover { box-shadow: var(--shadow-md); }
+
+.portfolio__name { font-weight: 600; color: var(--ink-900); font-size: 0.98rem; }
+.portfolio__ref {
+  color: var(--brand-700);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  background: var(--brand-50);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+.portfolio__sector { color: var(--ink-500); font-size: 0.83rem; }
+
+/* -------------------------------------------------------------- generate */
+
+.generate__client {
+  color: var(--ink-500);
+  margin-bottom: 1.75rem;
+  font-size: 0.95rem;
+}
+
+.field { display: block; margin: 1.75rem 0; }
+.field > span { display: block; font-weight: 600; margin-bottom: 0.15rem; font-size: 0.92rem; }
+.field__help {
+  font-weight: 400 !important;
+  color: var(--ink-500);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.5;
+}
+
+.context {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.15rem 1.35rem;
+  margin: 1.75rem 0;
+  box-shadow: var(--shadow-sm);
+  animation: rise var(--t-slow) var(--ease) both;
+}
+.context header h3 { display: flex; align-items: center; gap: 0.5rem; }
+.context header h3::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand-500);
+  box-shadow: 0 0 0 3px var(--brand-100);
+}
+.context__help { color: var(--ink-500); font-size: 0.86rem; margin: 0.25rem 0 1rem; }
+.context__sources { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.2rem; }
+.context__sources label {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease);
+}
+.context__sources label:hover { background: var(--canvas); }
+.context__label { font-weight: 500; }
+.context__system, .context__date {
+  color: var(--ink-400);
+  font-size: 0.78rem;
+  font-family: var(--mono);
+}
+.context__conflicts {
+  margin-top: 1.1rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--warn-100);
+  border: 1px solid var(--warn-line);
+  border-left: 3px solid var(--warn-600);
+  border-radius: var(--r);
+  color: var(--warn-700);
+  font-size: 0.88rem;
+}
+.context__conflicts h4 { color: var(--warn-700); }
+.context__conflicts ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+.context__empty { color: var(--ink-500); font-style: italic; }
+
+/* Generation progress — honest, staged, never a bare spinner (NFR-PERF-03). */
+.generating { padding-top: 3rem; max-width: 640px; }
+.generating h2 { display: flex; align-items: center; gap: 0.7rem; }
+.generating h2::after {
+  content: "";
+  width: 16px; height: 16px;
+  border: 2px solid var(--brand-100);
+  border-top-color: var(--brand-600);
+  border-radius: 50%;
+  animation: spin 750ms linear infinite;
+}
+
+.progress {
+  margin: 1.75rem 0;
+  display: grid;
+  gap: 0.15rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.progress__step {
+  color: var(--ink-400);
+  margin: 0;
+  padding: 0.5rem 0;
+  font-size: 0.92rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  transition: color var(--t) var(--ease);
+}
+.progress__step--active { color: var(--ink-900); font-weight: 550; }
+.generating__note {
+  color: var(--ink-500);
+  font-size: 0.86rem;
+  padding: 0.8rem 1rem;
+  background: var(--brand-50);
+  border-radius: var(--r);
+  border: 1px solid var(--brand-100);
+}
+
+/* ---------------------------------------------------------------- review */
+
+/* Permanent. Never hidden once the RM starts editing (FR-020). */
+.banner--ai {
+  background: linear-gradient(100deg, var(--brand-50), var(--paper));
+  border: 1px solid var(--brand-100);
+  border-left: 3px solid var(--brand-600);
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--r);
+  font-weight: 550;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  color: var(--brand-900);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  animation: fade var(--t-slow) var(--ease);
+}
+.banner--ai::before { content: "✦"; color: var(--brand-600); font-size: 1.05rem; }
+
+.review__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--line);
+}
+.review__meta {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.25rem 0.85rem;
+  margin: 0;
+  font-size: 0.84rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 0.7rem 0.95rem;
+  box-shadow: var(--shadow-xs);
+}
+.review__meta dt { color: var(--ink-400); font-weight: 500; }
+.review__meta dd { margin: 0; font-weight: 600; color: var(--ink-900); }
+
+.review__body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .review__body:has(.evidence-panel) { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+.review__sections { display: grid; gap: 1rem; min-width: 0; }
+.review__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 2.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.alert {
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--r);
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  animation: rise var(--t) var(--ease);
+  border: 1px solid transparent;
+}
+.alert--gaps {
+  background: var(--warn-100);
+  border-color: var(--warn-line);
+  border-left: 3px solid var(--warn-600);
+  color: var(--warn-700);
+}
+.alert--screening {
+  background: var(--warn-100);
+  border-color: var(--warn-line);
+  border-left: 3px solid var(--warn-600);
+  color: var(--warn-700);
+}
+.alert--error {
+  background: var(--danger-100);
+  border-color: var(--danger-line);
+  border-left: 3px solid var(--danger-600);
+  color: var(--danger-700);
+}
+.alert h3 { color: inherit; font-size: 0.98rem; }
+.alert ul { margin: 0.5rem 0 0; padding-left: 1.15rem; }
+.alert li { margin-bottom: 0.25rem; }
+.alert__note { font-weight: 650; margin-top: 0.6rem; margin-bottom: 0 !important; }
+
+.approved-badge {
+  color: var(--ok-700);
+  font-weight: 650;
+  background: var(--ok-100);
+  border: 1px solid var(--ok-line);
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  margin-right: auto;
+  animation: pop var(--t-slow) var(--ease);
+}
+
+/* -------------------------------------------------------------- sections */
+
+.section {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.15rem 1.35rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--t) var(--ease), border-color var(--t) var(--ease);
+  animation: rise var(--t-slow) var(--ease) both;
+}
+.section:hover { box-shadow: var(--shadow-md); }
+/* Low confidence gets an amber spine. Nothing else about the card changes —
+   the signal should be findable while scrolling, not shouty. */
+.section--low { border-left: 3px solid var(--warn-600); }
+
+.section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.section__flags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.section__body p { margin: 0.4rem 0; white-space: pre-wrap; line-height: 1.7; }
+.section__empty { color: var(--ink-400); font-style: italic; }
+.section__actions { display: flex; gap: 0.5rem; margin-top: 0.9rem; }
+.section__editor textarea { margin-bottom: 0.6rem; }
+
+.flag {
+  font-size: 0.71rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.flag--low { background: var(--warn-100); color: var(--warn-700); border-color: var(--warn-line); }
+.flag--external { background: var(--canvas-2); color: var(--ink-500); border-color: var(--line); }
+.flag--edited { background: var(--brand-50); color: var(--brand-700); border-color: var(--brand-100); }
+
+.section__evidence {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.section__evidence-label {
+  color: var(--ink-400);
+  font-size: 0.79rem;
+  font-weight: 550;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.citation {
+  padding: 0.15rem 0.55rem;
+  font-size: 0.75rem;
+  font-family: var(--mono);
+  font-weight: 600;
+  background: var(--brand-50);
+  border: 1px solid var(--brand-100);
+  color: var(--brand-700);
+  border-radius: var(--r-sm);
+  box-shadow: none;
+}
+.citation:hover:not(:disabled) {
+  background: var(--brand-100);
+  border-color: var(--brand-500);
+  color: var(--brand-900);
+  transform: translateY(-1px);
+}
+
+/* Gap markers carry real weight. A gap that gets scrolled past is functionally
+   identical to a fabricated value, so this is the loudest element on the page. */
+.gap--open {
+  background: var(--warn-100);
+  border: 1px solid var(--warn-line);
+  border-left: 3px solid var(--warn-600);
+  border-radius: var(--r);
+  padding: 0.85rem 1rem;
+  margin: 0.7rem 0;
+  animation: rise var(--t) var(--ease), pulse-warn 2.4s var(--ease) 0.4s 2;
+}
+.gap__label {
+  color: var(--warn-700);
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  font-weight: 600;
+  display: block;
+}
+.gap__help { margin: 0.35rem 0 0.6rem; font-size: 0.85rem; color: var(--warn-700); opacity: 0.88; }
+.gap__actions button {
+  background: var(--paper);
+  border-color: var(--warn-line);
+  color: var(--warn-700);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.85rem;
+}
+.gap__actions button:hover:not(:disabled) {
+  border-color: var(--warn-600);
+  color: var(--warn-700);
+  background: #fff;
+}
+.gap--resolved {
+  color: var(--ok-700);
+  font-size: 0.85rem;
+  font-weight: 550;
+  display: inline-block;
+  padding: 0.2rem 0;
+}
+
+/* -------------------------------------------------------- evidence panel */
+
+.evidence-panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.1rem 1.2rem;
+  align-self: start;
+  position: sticky;
+  top: 5.5rem;
+  box-shadow: var(--shadow-md);
+  animation: pop var(--t) var(--ease);
+  min-width: 0;
+}
+.evidence-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line-2);
+}
+.evidence-panel__header h4 { margin: 0; }
+.evidence-panel__header button {
+  border: none;
+  box-shadow: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.1rem 0.45rem;
+  color: var(--ink-400);
+  border-radius: var(--r-sm);
+}
+.evidence-panel__header button:hover { background: var(--canvas); color: var(--ink-900); transform: none; }
+
+.evidence-panel dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.3rem 0.7rem;
+  font-size: 0.84rem;
+  margin: 0;
+}
+.evidence-panel dt { color: var(--ink-400); font-weight: 550; }
+.evidence-panel dd { margin: 0; word-break: break-word; }
+.evidence-panel h5 {
+  margin: 1.1rem 0 0.4rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-400);
+  font-weight: 650;
+}
+/* The verbatim excerpt — never paraphrased, and styled as a quotation so it
+   reads as "this is what the document says", not "this is what we think". */
+.evidence-panel__excerpt {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--canvas);
+  border-left: 3px solid var(--brand-600);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: 0.87rem;
+  line-height: 1.65;
+  color: var(--ink-800);
+}
+.evidence-panel__claim { font-size: 0.87rem; color: var(--ink-700); }
+.evidence-panel__locator { color: var(--ink-400); font-family: var(--mono); font-size: 0.8rem; }
+
+/* --------------------------------------------------------------- dialog */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 22, 28, 0.55);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  z-index: 60;
+  animation: fade var(--t) var(--ease);
+}
+.dialog {
+  background: var(--paper);
+  border-radius: var(--r-xl);
+  padding: 1.75rem;
+  max-width: 560px;
+  width: 100%;
+  max-height: 88vh;
+  overflow: auto;
+  box-shadow: var(--shadow-lg);
+  animation: pop var(--t-slow) var(--ease);
+}
+.dialog h2 { margin-bottom: 1.1rem; }
+
+.dialog__meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.3rem 1rem;
+  font-size: 0.87rem;
+  margin: 1rem 0;
+  padding: 0.9rem 1.05rem;
+  background: var(--canvas);
+  border-radius: var(--r);
+  border: 1px solid var(--line-2);
+}
+.dialog__meta dt { color: var(--ink-400); font-weight: 550; }
+.dialog__meta dd { margin: 0; font-weight: 600; }
+.dialog__meta code { font-size: 0.8rem; color: var(--brand-700); }
+
+.dialog__attestation {
+  background: var(--brand-50);
+  border: 1px solid var(--brand-100);
+  padding: 1rem 1.15rem;
+  border-radius: var(--r);
+  margin: 1.1rem 0;
+  font-size: 0.9rem;
+  color: var(--brand-900);
+}
+.dialog__note { font-size: 0.84rem; color: var(--ink-500); margin-bottom: 0 !important; }
+
+.dialog__blocked {
+  background: var(--warn-100);
+  border: 1px solid var(--warn-line);
+  border-left: 3px solid var(--warn-600);
+  padding: 1rem 1.15rem;
+  border-radius: var(--r);
+  margin: 1.1rem 0;
+  color: var(--warn-700);
+  font-size: 0.9rem;
+}
+.dialog__blocked h3 { color: var(--warn-700); font-size: 0.98rem; }
+.dialog__blocked ul { margin: 0.6rem 0 0; padding-left: 1.15rem; }
+
+/* The checkbox that gates approval. Never checked by default (Principle III). */
+.dialog__confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  font-weight: 600;
+  margin: 1.25rem 0;
+  padding: 0.9rem 1.05rem;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r);
+  cursor: pointer;
+  font-size: 0.92rem;
+  transition: border-color var(--t) var(--ease), background var(--t) var(--ease);
+}
+.dialog__confirm:hover { border-color: var(--brand-500); background: var(--brand-50); }
+.dialog__confirm:has(input:checked) {
+  border-color: var(--brand-600);
+  background: var(--brand-50);
+  color: var(--brand-900);
+}
+.dialog__confirm input { margin-top: 0.28rem; flex: none; }
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line-2);
+}
+
+/* ------------------------------------------------------- terminal states */
+
+.loading {
+  padding-top: 20vh;
+  text-align: center;
+  color: var(--ink-500);
+}
+
+.approved {
+  padding-top: 5vh;
+  max-width: 560px;
+  text-align: center;
+  animation: pop var(--t-slow) var(--ease);
+}
+.approved h2 {
+  color: var(--ok-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.approved h2::before {
+  content: "✓";
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--ok-100);
+  color: var(--ok-600);
+  border: 1.5px solid var(--ok-line);
+  font-size: 1.05rem;
+}
+.approved > p { color: var(--ink-700); }
+.approved button { margin-top: 1.5rem; }
+
+/* --------------------------------------------------------- small screens */
+
+@media (max-width: 720px) {
+  .app__header { padding: 0.7rem 1rem; }
+  .app__synthetic-notice { padding: 0.45rem 1rem; }
+  main { padding: 1.5rem 1rem 3rem; }
+  .portfolio__list button { grid-template-columns: 1fr; gap: 0.3rem; }
+  .review__header { flex-direction: column; gap: 1rem; }
+  .review__actions { flex-direction: column-reverse; align-items: stretch; }
+  .review__actions button { width: 100%; }
+  .approved-badge { margin-right: 0; text-align: center; }
+  .evidence-panel { position: static; }
+}
+
+/* ---------------------------------------------------- loading & empty */
+
+/* Skeleton rows keep the page's shape while data loads, so content resolves
+   in place rather than arriving and shoving the layout around. */
+.skeleton-row {
+  height: 64px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line-2);
+  background:
+    linear-gradient(90deg, var(--canvas-2) 25%, var(--paper) 50%, var(--canvas-2) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skeleton-row:nth-child(2) { animation-delay: 120ms; opacity: 0.85; }
+.skeleton-row:nth-child(3) { animation-delay: 240ms; opacity: 0.7; }
+.skeleton-row:nth-child(4) { animation-delay: 360ms; opacity: 0.55; }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+  color: var(--ink-500);
+  animation: fade var(--t-slow) var(--ease);
+}

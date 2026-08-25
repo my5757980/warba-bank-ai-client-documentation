@@ -1,0 +1,286 @@
+# Warba Bank — Shariah Screening Vocabulary
+#
+# This file is the authoritative, binding gate for Constitution Principle II.
+#
+# It is plain YAML on purpose. A Shariah reviewer must be able to read, question, and
+# amend it without reading code — a compliance control nobody outside engineering can
+# audit is not a compliance control.
+#
+# The deterministic layer (app/screening/deterministic.py) matches these terms with
+# word boundaries and blocks any draft that hits one, BEFORE the RM sees it. The
+# semantic layer may add findings; it can never clear a block.
+#
+# Amending this file:
+#   1. Bump `version` (semver).
+#   2. Every ScreeningResult records the version applied, so past decisions stay
+#      reproducible.
+#   3. Re-run: pytest tests/unit/test_screening_deterministic.py
+
+version: "1.0.0"
+last_reviewed: "2026-08-21"
+reviewed_by: "TODO(SHARIAH_REVIEWER): pending review by the Shariah Board liaison"
+
+# ---------------------------------------------------------------------------
+# Approved Islamic structures
+# ---------------------------------------------------------------------------
+# A product reference that maps to none of these is FLAGGED for RM attention.
+# It is never mapped by guess (FR-017).
+
+approved_structures:
+  - name: Murabaha
+    description: Cost-plus sale at a disclosed markup.
+    typical_use: Working capital, trade finance, asset acquisition.
+  - name: Ijara
+    description: Lease; the bank owns the asset and leases it to the client.
+    typical_use: Equipment, real estate, vehicles.
+  - name: Ijara Muntahia Bittamleek
+    description: Lease ending in transfer of ownership.
+    typical_use: Long-term asset finance.
+  - name: Wakala
+    description: Agency arrangement; the bank acts as agent for a fee.
+    typical_use: Investment, treasury placement.
+  - name: Musharaka
+    description: Partnership with shared capital, profit, and loss.
+    typical_use: Project and equity finance.
+  - name: Diminishing Musharaka
+    description: Partnership in which the client progressively buys out the bank.
+    typical_use: Property finance.
+  - name: Mudaraba
+    description: Profit-sharing between capital provider and manager.
+    typical_use: Investment accounts, fund structures.
+  - name: Salam
+    description: Forward purchase with advance payment for future delivery.
+    typical_use: Agriculture, commodities.
+  - name: Istisna'a
+    description: Commissioned manufacture or construction.
+    typical_use: Construction, manufacturing, project finance.
+  - name: Tawarruq
+    description: Commodity monetisation for liquidity.
+    typical_use: Liquidity management. Subject to additional review.
+  - name: Kafala
+    description: Guarantee.
+    typical_use: Letters of guarantee.
+
+# ---------------------------------------------------------------------------
+# Approved terminology
+# ---------------------------------------------------------------------------
+# Preferred phrasing per concept. Used to steer composition and to explain a block
+# to the RM in terms of what they should have said instead.
+
+approved_terminology:
+  return_on_finance: "profit rate"
+  financing_arrangement: "facility"
+  lending: "financing"
+  borrower: "client"
+  loan_amount: "facility amount"
+  repayment: "settlement"
+  instalment: "rental" # under Ijara
+  late_payment: "late payment charge (payable to charity)"
+  deposit_return: "expected profit"
+  credit_line: "financing facility"
+
+# ---------------------------------------------------------------------------
+# Prohibited terms — the binding block list
+# ---------------------------------------------------------------------------
+# severity: BLOCK  → draft is not displayed; generation returns 451 (FR-016)
+# severity: FLAG   → surfaced to the RM for attention, does not block
+#
+# Matching is case-insensitive with word boundaries, so "interested" does not match
+# "interest" and "Islamic bond (sukuk)" does not match on "bond" alone where the
+# term is written as a multi-word phrase.
+
+prohibited_terms:
+  # --- Riba / interest -----------------------------------------------------
+  - term: "interest rate"
+    severity: BLOCK
+    rule_id: SH-001
+    rationale: "Riba. Use 'profit rate' under an approved structure."
+  - term: "interest of"
+    severity: BLOCK
+    rule_id: SH-002
+    rationale: "Riba. States an interest amount."
+  - term: "interest-bearing"
+    severity: BLOCK
+    rule_id: SH-002a
+    rationale: "Riba."
+  - term: "fixed interest"
+    severity: BLOCK
+    rule_id: SH-002b
+    rationale: "Riba."
+  - term: "carries interest"
+    severity: BLOCK
+    rule_id: SH-002c
+    rationale: "Riba."
+  - term: "charges interest"
+    severity: BLOCK
+    rule_id: SH-002d
+    rationale: "Riba."
+  - term: "pays interest"
+    severity: BLOCK
+    rule_id: SH-002e
+    rationale: "Riba."
+  - term: "interest accruing"
+    severity: BLOCK
+    rule_id: SH-002f
+    rationale: "Riba."
+  # Bare "interest" is FLAG, not BLOCK. In meeting notes it is far more often ordinary
+  # English ("the client expressed interest in expanding") than riba. Blocking it
+  # produced a false positive on a compliant control case, and a control that fires on
+  # correct content stops being read.
+  - term: "interest"
+    severity: FLAG
+    rule_id: SH-002z
+    rationale: "Check the sense — if this refers to riba, rephrase using profit rate."
+  - term: "riba"
+    severity: BLOCK
+    rule_id: SH-003
+    rationale: "Explicit reference to riba must not appear in client documentation."
+  - term: "usury"
+    severity: BLOCK
+    rule_id: SH-004
+    rationale: "Riba by another name."
+  - term: "APR"
+    severity: BLOCK
+    rule_id: SH-005
+    rationale: "Annual percentage rate is an interest construct."
+  - term: "accrued interest"
+    severity: BLOCK
+    rule_id: SH-006
+    rationale: "Riba."
+  - term: "compound interest"
+    severity: BLOCK
+    rule_id: SH-007
+    rationale: "Riba."
+
+  # --- Conventional lending -----------------------------------------------
+  - term: "conventional loan"
+    severity: BLOCK
+    rule_id: SH-010
+    rationale: "Interest-bearing lending. Use an approved Islamic structure."
+  - term: "loan agreement"
+    severity: BLOCK
+    rule_id: SH-011
+    rationale: "Use 'facility agreement' under an approved structure."
+  - term: "term loan"
+    severity: BLOCK
+    rule_id: SH-012
+    rationale: "Conventional lending product."
+  - term: "overdraft"
+    severity: BLOCK
+    rule_id: SH-013
+    rationale: "Interest-bearing facility."
+  - term: "bridging loan"
+    severity: BLOCK
+    rule_id: SH-014
+    rationale: "Conventional lending product."
+  - term: "lend"
+    severity: FLAG
+    rule_id: SH-015
+    rationale: "Prefer 'finance' or 'provide financing'."
+  - term: "borrower"
+    severity: FLAG
+    rule_id: SH-016
+    rationale: "Prefer 'client'."
+
+  # --- Conventional instruments -------------------------------------------
+  - term: "bond coupon"
+    severity: BLOCK
+    rule_id: SH-020
+    rationale: "Interest-bearing security. Consider Sukuk."
+  - term: "conventional bond"
+    severity: BLOCK
+    rule_id: SH-021
+    rationale: "Interest-bearing security."
+  - term: "interest swap"
+    severity: BLOCK
+    rule_id: SH-022
+    rationale: "Derivative on an interest benchmark."
+  - term: "derivative contract"
+    severity: FLAG
+    rule_id: SH-023
+    rationale: "Gharar risk. Requires Shariah review."
+
+  # --- Gharar / maysir ----------------------------------------------------
+  - term: "speculative trading"
+    severity: FLAG
+    rule_id: SH-030
+    rationale: "Maysir concern. Requires Shariah review."
+  - term: "gambling"
+    severity: BLOCK
+    rule_id: SH-031
+    rationale: "Maysir is prohibited."
+
+# ---------------------------------------------------------------------------
+# Prohibited sectors
+# ---------------------------------------------------------------------------
+# Financing activity in these sectors requires escalation, not drafting.
+
+prohibited_sectors:
+  - name: "alcohol"
+    rule_id: SH-100
+    rationale: "Prohibited sector."
+  - name: "brewery"
+    rule_id: SH-101
+    rationale: "Prohibited sector (alcohol production)."
+  - name: "distillery"
+    rule_id: SH-102
+    rationale: "Prohibited sector (alcohol production)."
+  - name: "pork"
+    rule_id: SH-103
+    rationale: "Prohibited sector."
+  - name: "casino"
+    rule_id: SH-104
+    rationale: "Prohibited sector (maysir)."
+  - name: "gambling"
+    rule_id: SH-105
+    rationale: "Prohibited sector (maysir)."
+  - name: "adult entertainment"
+    rule_id: SH-106
+    rationale: "Prohibited sector."
+  - name: "conventional insurance"
+    rule_id: SH-107
+    rationale: "Gharar. Takaful is the compliant alternative."
+  - name: "tobacco"
+    rule_id: SH-108
+    rationale: "Restricted sector. Requires Shariah review."
+
+# ---------------------------------------------------------------------------
+# Decisioning language — Credit Memo (DT3) exclusions
+# ---------------------------------------------------------------------------
+# Not a Shariah control. Enforced by the same deterministic machinery because
+# spec.md §5 DT3 excludes ratings, recommendations, and pricing from generated
+# output, and that exclusion must not depend on prompt compliance (task T144).
+
+prohibited_decisioning:
+  - term: "we recommend approval"
+    severity: BLOCK
+    rule_id: DEC-001
+    rationale: "The system does not make credit recommendations."
+  - term: "recommended for approval"
+    severity: BLOCK
+    rule_id: DEC-002
+    rationale: "The system does not make credit recommendations."
+  - term: "credit rating of"
+    severity: BLOCK
+    rule_id: DEC-003
+    rationale: "The system does not assign risk ratings."
+  - term: "risk rating"
+    severity: BLOCK
+    rule_id: DEC-004
+    rationale: "The system does not assign risk ratings."
+  - term: "internal rating"
+    severity: BLOCK
+    rule_id: DEC-005
+    rationale: "The system does not assign risk ratings."
+  - term: "approve this facility"
+    severity: BLOCK
+    rule_id: DEC-006
+    rationale: "The system does not make credit decisions."
+  - term: "creditworthy"
+    severity: FLAG
+    rule_id: DEC-007
+    rationale: "Assessment language. Report evidence, not a verdict."
+  - term: "profit rate of"
+    severity: BLOCK
+    rule_id: DEC-008
+    rationale: "The system does not determine pricing."

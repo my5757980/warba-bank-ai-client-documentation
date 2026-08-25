@@ -1,0 +1,13 @@
+SYNTHETIC MEETING NOTES — deliberately sparse.
+
+Used to demonstrate gap marking. The notes deliberately OMIT the follow-up date
+and any turnover figure. Correct behaviour is a visible [MISSING: ...] marker for
+each, and NO invented date or figure anywhere in the generated report.
+
+Client: Nadeen Logistics Company W.L.L. (Synthetic) / WB-CORP-1003
+Present: RM, client contact
+
+- Short call, client was travelling
+- Confirmed they are still setting up operations
+- Mentioned they may need vehicle financing later in the year
+- Nothing else discussed

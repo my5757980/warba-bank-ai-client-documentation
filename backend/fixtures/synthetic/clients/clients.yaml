@@ -1,0 +1,298 @@
+# SYNTHETIC CLIENT DATA — Warba Bank AI Client Documentation prototype
+#
+# ⚠️  EVERY RECORD IN THIS FILE IS FICTITIOUS.
+#
+# Constitution Principle VII is NON-NEGOTIABLE: no real customer name, civil ID,
+# account number, contact detail, or financial statement may enter this repository.
+# Company names, registrations, and figures below are invented. Any resemblance to a
+# real Kuwaiti entity is coincidental and unintended.
+#
+# The database enforces this independently: `client.is_synthetic` carries a CHECK
+# constraint that a non-synthetic row cannot satisfy.
+
+clients:
+  # ---------------------------------------------------------------- Portfolio: Sara
+  - client_reference: "WB-CORP-1001"
+    legal_name: "Al-Sabah Trading Company W.L.L. (Synthetic)"
+    trade_name: "Al-Sabah Trading"
+    commercial_registration: "SYNTH-CR-100001"
+    sector: "Wholesale Trade & Distribution"
+    incorporation_date: "2009-03-14"
+    relationship_since: "2014-06-01"
+    kyc_status: "COMPLETE"
+    owning_rm: "sara.rm@warba.demo"
+    records:
+      - record_type: PROFILE
+        source_system: CRM
+        effective_date: "2026-01-15"
+        payload:
+          legal_name: "Al-Sabah Trading Company W.L.L. (Synthetic)"
+          sector: "Wholesale Trade & Distribution"
+          registered_address: "Block 4, Shuwaikh Industrial Area, Kuwait"
+          employee_count: 240
+          managing_director: "Fictitious Person A"
+          finance_director: "Fictitious Person B"
+          ownership: "Family-held; three shareholders"
+      - record_type: FACILITY
+        source_system: CORE_BANKING
+        effective_date: "2026-02-01"
+        payload:
+          facility_type: "Murabaha"
+          facility_purpose: "Working capital — inventory acquisition"
+          approved_limit: "KWD 1,200,000"
+          utilisation: "KWD 840,000"
+          tenor_months: 24
+          status: "Active"
+      - record_type: FACILITY
+        source_system: CORE_BANKING
+        effective_date: "2026-02-01"
+        payload:
+          facility_type: "Ijara"
+          facility_purpose: "Warehouse equipment"
+          approved_limit: "KWD 350,000"
+          utilisation: "KWD 310,000"
+          tenor_months: 48
+          status: "Active"
+      - record_type: FINANCIAL_SUMMARY
+        source_system: CORE_BANKING
+        effective_date: "2025-12-31"
+        payload:
+          fiscal_year: "FY2025"
+          annual_turnover: "KWD 4,500,000"
+          net_profit: "KWD 385,000"
+          total_assets: "KWD 6,200,000"
+          basis: "Audited"
+      - record_type: INTERACTION
+        source_system: CRM
+        effective_date: "2026-05-20"
+        payload:
+          interaction_type: "Client meeting"
+          attendees: "RM, Finance Director"
+          summary: "Reviewed facility utilisation and discussed seasonal working capital needs."
+          outcome: "Client to share updated cash flow forecast."
+      - record_type: KYC
+        source_system: KYC_SYSTEM
+        effective_date: "2025-11-02"
+        payload:
+          kyc_status: "COMPLETE"
+          last_review: "2025-11-02"
+          next_review_due: "2027-11-02"
+          risk_classification: "Medium"
+
+  - client_reference: "WB-CORP-1002"
+    legal_name: "Gulf Horizon Contracting K.S.C.C. (Synthetic)"
+    trade_name: "Gulf Horizon"
+    commercial_registration: "SYNTH-CR-100002"
+    sector: "Construction & Contracting"
+    incorporation_date: "2005-09-22"
+    relationship_since: "2011-02-15"
+    kyc_status: "COMPLETE"
+    owning_rm: "sara.rm@warba.demo"
+    records:
+      - record_type: PROFILE
+        source_system: CRM
+        effective_date: "2026-03-10"
+        payload:
+          legal_name: "Gulf Horizon Contracting K.S.C.C. (Synthetic)"
+          sector: "Construction & Contracting"
+          registered_address: "Block 2, Ardiya, Kuwait"
+          employee_count: 610
+          managing_director: "Fictitious Person C"
+          ownership: "Closed shareholding company"
+      # Deliberate conflict with the CRM record above: Core Banking reports a different
+      # headcount. This exercises FR-013 — the discrepancy must be surfaced to the RM,
+      # never silently resolved.
+      - record_type: PROFILE
+        source_system: CORE_BANKING
+        effective_date: "2026-03-10"
+        payload:
+          legal_name: "Gulf Horizon Contracting K.S.C.C. (Synthetic)"
+          sector: "Construction & Contracting"
+          employee_count: 580
+      - record_type: FACILITY
+        source_system: CORE_BANKING
+        effective_date: "2026-01-20"
+        payload:
+          facility_type: "Istisna'a"
+          facility_purpose: "Project construction financing"
+          approved_limit: "KWD 2,750,000"
+          utilisation: "KWD 1,900,000"
+          tenor_months: 36
+          status: "Active"
+      - record_type: FINANCIAL_SUMMARY
+        source_system: CORE_BANKING
+        effective_date: "2025-12-31"
+        payload:
+          fiscal_year: "FY2025"
+          annual_turnover: "KWD 12,800,000"
+          net_profit: "KWD 940,000"
+          total_assets: "KWD 18,400,000"
+          basis: "Audited"
+      - record_type: KYC
+        source_system: KYC_SYSTEM
+        effective_date: "2026-01-08"
+        payload:
+          kyc_status: "COMPLETE"
+          last_review: "2026-01-08"
+          next_review_due: "2028-01-08"
+          risk_classification: "Medium"
+
+  # A deliberately sparse client. Generating a profile here must produce mostly gap
+  # markers, not mostly plausible prose (spec.md edge case).
+  - client_reference: "WB-CORP-1003"
+    legal_name: "Nadeen Logistics Company W.L.L. (Synthetic)"
+    trade_name: "Nadeen Logistics"
+    commercial_registration: "SYNTH-CR-100003"
+    sector: "Transport & Logistics"
+    incorporation_date: "2021-07-05"
+    relationship_since: "2026-04-01"
+    kyc_status: "PENDING"
+    owning_rm: "sara.rm@warba.demo"
+    records:
+      - record_type: PROFILE
+        source_system: CRM
+        effective_date: "2026-04-01"
+        payload:
+          legal_name: "Nadeen Logistics Company W.L.L. (Synthetic)"
+          sector: "Transport & Logistics"
+          registered_address: "Block 1, Sabhan, Kuwait"
+
+  - client_reference: "WB-CORP-1004"
+    legal_name: "Bayan Food Industries W.L.L. (Synthetic)"
+    trade_name: "Bayan Foods"
+    commercial_registration: "SYNTH-CR-100004"
+    sector: "Food Manufacturing"
+    incorporation_date: "2013-11-30"
+    relationship_since: "2016-08-20"
+    kyc_status: "COMPLETE"
+    owning_rm: "sara.rm@warba.demo"
+    records:
+      - record_type: PROFILE
+        source_system: CRM
+        effective_date: "2026-02-18"
+        payload:
+          legal_name: "Bayan Food Industries W.L.L. (Synthetic)"
+          sector: "Food Manufacturing"
+          registered_address: "Block 3, Sulaibiya, Kuwait"
+          employee_count: 175
+          managing_director: "Fictitious Person D"
+      - record_type: FACILITY
+        source_system: CORE_BANKING
+        effective_date: "2026-02-18"
+        payload:
+          facility_type: "Murabaha"
+          facility_purpose: "Raw material purchase"
+          approved_limit: "KWD 600,000"
+          utilisation: "KWD 425,000"
+          tenor_months: 12
+          status: "Active"
+      - record_type: FINANCIAL_SUMMARY
+        source_system: CORE_BANKING
+        effective_date: "2025-12-31"
+        payload:
+          fiscal_year: "FY2025"
+          annual_turnover: "KWD 3,100,000"
+          net_profit: "KWD 210,000"
+          basis: "Management accounts"
+      - record_type: PROFILE
+        source_system: EXTERNAL_REGISTRY
+        effective_date: "2026-01-05"
+        is_external: true
+        payload:
+          registry_status: "Active"
+          registration_year: 2013
+          licensed_activities: "Food manufacturing and distribution"
+
+  - client_reference: "WB-CORP-1005"
+    legal_name: "Meridian Marine Services W.L.L. (Synthetic)"
+    trade_name: "Meridian Marine"
+    commercial_registration: "SYNTH-CR-100005"
+    sector: "Marine & Port Services"
+    incorporation_date: "2017-05-11"
+    relationship_since: "2019-09-30"
+    kyc_status: "COMPLETE"
+    owning_rm: "sara.rm@warba.demo"
+    records:
+      - record_type: PROFILE
+        source_system: CRM
+        effective_date: "2026-04-22"
+        payload:
+          legal_name: "Meridian Marine Services W.L.L. (Synthetic)"
+          sector: "Marine & Port Services"
+          registered_address: "Shuwaikh Port, Kuwait"
+          employee_count: 95
+      - record_type: FACILITY
+        source_system: CORE_BANKING
+        effective_date: "2026-04-22"
+        payload:
+          facility_type: "Ijara Muntahia Bittamleek"
+          facility_purpose: "Vessel acquisition"
+          approved_limit: "KWD 1,850,000"
+          utilisation: "KWD 1,850,000"
+          tenor_months: 60
+          status: "Active"
+      - record_type: INTERACTION
+        source_system: CRM
+        effective_date: "2026-06-11"
+        payload:
+          interaction_type: "Site visit"
+          attendees: "RM, Operations Manager"
+          summary: "Toured facilities; client indicated interest in fleet expansion."
+          outcome: "Awaiting formal proposal from client."
+
+  # ---------------------------------------------------------- Portfolio: Khalid
+  # Owned by a different RM. Exercises portfolio scoping (FR-001): Sara must not see
+  # these, and must not be able to approve documents for them.
+  - client_reference: "WB-CORP-2001"
+    legal_name: "Arabian Textiles Group W.L.L. (Synthetic)"
+    trade_name: "Arabian Textiles"
+    commercial_registration: "SYNTH-CR-200001"
+    sector: "Textile Manufacturing"
+    incorporation_date: "2008-01-19"
+    relationship_since: "2012-03-05"
+    kyc_status: "COMPLETE"
+    owning_rm: "khalid.rm@warba.demo"
+    records:
+      - record_type: PROFILE
+        source_system: CRM
+        effective_date: "2026-03-01"
+        payload:
+          legal_name: "Arabian Textiles Group W.L.L. (Synthetic)"
+          sector: "Textile Manufacturing"
+          employee_count: 420
+      - record_type: FINANCIAL_SUMMARY
+        source_system: CORE_BANKING
+        effective_date: "2025-12-31"
+        payload:
+          fiscal_year: "FY2025"
+          annual_turnover: "KWD 7,400,000"
+          net_profit: "KWD 510,000"
+          basis: "Audited"
+
+  - client_reference: "WB-CORP-2002"
+    legal_name: "Kuwait Petro Services K.S.C.C. (Synthetic)"
+    trade_name: "KPS"
+    commercial_registration: "SYNTH-CR-200002"
+    sector: "Oilfield Services"
+    incorporation_date: "2003-06-08"
+    relationship_since: "2010-10-12"
+    kyc_status: "COMPLETE"
+    owning_rm: "khalid.rm@warba.demo"
+    records:
+      - record_type: PROFILE
+        source_system: CRM
+        effective_date: "2026-05-05"
+        payload:
+          legal_name: "Kuwait Petro Services K.S.C.C. (Synthetic)"
+          sector: "Oilfield Services"
+          employee_count: 780
+      - record_type: FACILITY
+        source_system: CORE_BANKING
+        effective_date: "2026-05-05"
+        payload:
+          facility_type: "Wakala"
+          facility_purpose: "Treasury placement"
+          approved_limit: "KWD 3,500,000"
+          utilisation: "KWD 2,100,000"
+          tenor_months: 12
+          status: "Active"

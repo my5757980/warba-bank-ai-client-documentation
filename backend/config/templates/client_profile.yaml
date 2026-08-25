@@ -1,0 +1,85 @@
+# Client Profile / Relationship Brief — DT2 (spec.md §5)
+#
+# Demonstrates multi-source assembly: this document draws on core banking, CRM, KYC,
+# and financial records simultaneously, which is where source conflicts surface.
+
+document_type: CLIENT_PROFILE
+version: "1.0.0"
+display_name: "Corporate Client Profile"
+prompt_template_ref: "config/prompts/client_profile/v1.0.0"
+screening_profile: standard
+
+# No RM input required — this document is assembled entirely from the bank's own
+# records, which is precisely its value before a meeting.
+required_inputs: []
+
+sections:
+  - key: company_overview
+    title: "Company Overview and Legal Identity"
+    required: true
+    guidance: >
+      Legal name, trade name, registration, incorporation date, and legal form. State
+      only what the records show. Mark anything absent.
+    max_words: 200
+
+  - key: ownership_and_management
+    title: "Ownership and Key Management"
+    required: true
+    guidance: >
+      Shareholding structure and named officers. Do not infer roles from titles that
+      are not recorded.
+    max_words: 200
+
+  - key: business_activity
+    title: "Sector, Activity and Operating Footprint"
+    required: true
+    guidance: Sector, principal activities, locations, and headcount where recorded.
+    max_words: 250
+
+  - key: relationship_summary
+    title: "Banking Relationship Summary"
+    required: true
+    guidance: >
+      Relationship tenure and overall position. Do not characterise the relationship
+      as strong or weak — report what the records show.
+    max_words: 200
+
+  - key: existing_facilities
+    title: "Existing Islamic Facilities and Utilisation"
+    required: true
+    guidance: >
+      Each facility by approved Islamic structure, with limit, utilisation, tenor, and
+      status. Every figure must come from a cited record.
+    max_words: 350
+
+  - key: financial_summary
+    title: "Financial Summary"
+    required: true
+    guidance: >
+      Turnover, profit, and assets from available statements, with the fiscal year and
+      basis (audited or management accounts). Where no statement exists, this section
+      is a gap — never estimate from facility size or sector norms.
+    max_words: 300
+
+  - key: relationship_history
+    title: "Relationship History Highlights"
+    required: true
+    guidance: Notable interactions in date order. Only recorded interactions.
+    max_words: 300
+
+  - key: opportunities
+    title: "Identified Opportunities"
+    required: true
+    guidance: >
+      Opportunities the client has actually expressed or that the records evidence.
+      Do not generate speculative cross-sell ideas — that is the RM's judgement, and
+      an invented opportunity in a client file is worse than none.
+    max_words: 250
+
+  - key: risk_observations
+    title: "Risk Observations"
+    required: true
+    guidance: >
+      Recorded risks, overdue items, KYC status, and data-quality concerns including
+      any conflict between sources. Do not soften. No risk rating.
+    max_words: 250

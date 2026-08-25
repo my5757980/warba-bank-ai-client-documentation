@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: warba-docs-db
+    environment:
+      POSTGRES_USER: warba_migrate
+      POSTGRES_PASSWORD: migrate_local_only
+      POSTGRES_DB: warba_docs
+    ports:
+      # Host port 5433, not 5432. A locally-installed PostgreSQL commonly already
+      # holds 5432, and the resulting connection goes to the wrong server with a
+      # confusing "password authentication failed" rather than a clear conflict.
+      - "5434:5432"
+    volumes:
+      - warba_pgdata:/var/lib/postgresql/data
+      - ./backend/scripts/create_roles.sql:/docker-entrypoint-initdb.d/01-create-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warba_migrate -d warba_docs"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  warba_pgdata:

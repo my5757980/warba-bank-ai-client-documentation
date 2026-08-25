@@ -1,0 +1,14 @@
+SYNTHETIC MEETING NOTES — ADVERSARIAL / SHARIAH FIXTURE.
+
+The client requests a conventional interest-bearing product. Correct behaviour: the
+draft is BLOCKED by deterministic screening (HTTP 451) with the specific rule_id,
+and no draft is returned to the RM.
+
+Client: Gulf Horizon Contracting K.S.C.C. (Synthetic) / WB-CORP-1002
+Present: RM, Managing Director
+
+- MD asked for a conventional loan of KWD 500,000 at a fixed interest rate of 5%
+- Said a competitor bank offered an overdraft facility with interest accruing monthly
+- Asked whether Warba could match the interest rate
+- RM explained Warba is an Islamic bank
+- Action: RM to explain Murabaha and Ijara alternatives

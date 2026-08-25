@@ -1,0 +1,1021 @@
+openapi: 3.1.0
+
+info:
+  title: Warba Bank — AI-Powered Client Documentation API
+  version: 1.0.0
+  description: |
+    Backend contract for Track 1 of the Warba Bank Corporate Banking AI Challenge.
+
+    Governed by Constitution v1.0.0. Three contract-level invariants are worth stating
+    before the endpoints, because they are the reason several endpoints look the way
+    they do:
+
+    1. **No auto-approval path exists.** `POST /documents/{id}/approve` is the only
+       transition into `APPROVED`, it requires an authenticated RM, and it requires the
+       caller to echo the `content_hash` of the exact version being approved. There is no
+       endpoint, parameter, or scheduled process that approves a document any other way
+       (Principle III, FR-026/FR-027).
+    2. **Failure produces no document.** Generation, screening, and retrieval failures
+       return a 4xx/5xx error, never a partial draft (Principle I, FR-037).
+    3. **Audit is read-only over HTTP.** No endpoint mutates or deletes an audit event.
+       The database role backing this API does not hold UPDATE or DELETE on the audit
+       table (Principle VIII, FR-032).
+
+    All data served by this API is synthetic (Principle VII).
+
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+  - name: Clients
+  - name: Sources
+  - name: Documents
+  - name: Sections
+  - name: Approval
+  - name: Export
+  - name: Audit
+
+paths:
+
+  # ───────────────────────────── Auth ─────────────────────────────
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate and receive a bearer token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, token_type, user]
+                properties:
+                  access_token: { type: string }
+                  token_type: { type: string, enum: [bearer] }
+                  expires_in: { type: integer, description: Seconds }
+                  user: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current authenticated user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ─────────────────────────── Clients ────────────────────────────
+
+  /clients:
+    get:
+      tags: [Clients]
+      summary: List clients in the caller's portfolio
+      description: |
+        An `RM` receives only clients where they are the owning RM. Scoping is applied by a
+        shared authorisation dependency, not per-endpoint (FR-001, R11).
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/ClientSummary' }
+                  total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /clients/{client_id}/context:
+    get:
+      tags: [Clients]
+      summary: Preview the context that would be used for generation
+      description: |
+        Returns every source the assembler would offer for this document type, so the RM can
+        see what the system knows **before** it writes anything (FR-003) and deselect sources
+        (FR-004). Deterministic — no model call, no vector search (R4).
+      parameters:
+        - { name: client_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: document_type
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/DocumentType' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssembledContext' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ─────────────────────────── Sources ────────────────────────────
+
+  /clients/{client_id}/sources:
+    post:
+      tags: [Sources]
+      summary: Upload a grounding document
+      description: |
+        Uploaded content is classified `UNTRUSTED` on arrival and is never treated as
+        instruction (FR-007, R7). Size and page limits are validated **before** upload;
+        an oversized file is declined with 413 and a clear message — never silently
+        truncated (spec edge case).
+      parameters:
+        - { name: client_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                title: { type: string }
+      responses:
+        '201':
+          description: Uploaded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceDocument' }
+        '413':
+          description: File exceeds the 32 MB / 600 page limit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '415':
+          description: Unsupported media type
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ────────────────────────── Documents ───────────────────────────
+
+  /documents:
+    post:
+      tags: [Documents]
+      summary: Generate a document draft
+      description: |
+        Runs the two-pass pipeline (R3): Grounding Pass builds the Evidence Ledger, Composition
+        Pass produces schema-validated sections, then deterministic post-validation and Shariah
+        screening run before anything is returned.
+
+        **Fails closed.** If grounding fails, composition fails validation, a numeric literal
+        cannot be traced to the ledger, or deterministic screening blocks, the response is an
+        error and **no document is returned** (FR-037). A failure is still written to the audit
+        trail (FR-039).
+
+        The created document is always `status: DRAFT` and `shariah_status: PENDING_REVIEW`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_id, document_type]
+              properties:
+                client_id: { type: string, format: uuid }
+                document_type: { $ref: '#/components/schemas/DocumentType' }
+                meeting_notes:
+                  type: string
+                  description: Required for CALL_REPORT. Treated as untrusted data.
+                source_document_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                  description: Subset the RM chose to include (FR-004).
+                client_record_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                rm_instruction:
+                  type: string
+                  maxLength: 1000
+                  description: |
+                    Optional stylistic steer. Scoped to presentation only — it cannot
+                    authorise a claim, alter screening, or affect approval (R7).
+      responses:
+        '201':
+          description: Draft generated and screened
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentDetail' }
+        '422':
+          description: |
+            Generation completed but failed deterministic validation — unresolvable evidence
+            reference, untraceable numeric literal, or missing required section. No document
+            is created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '451':
+          description: |
+            Shariah screening blocked the draft. The violation is reported; the draft is not
+            returned (FR-016).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScreeningBlockedError' }
+        '503':
+          description: Generation service unavailable. No partial content (FR-037).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+    get:
+      tags: [Documents]
+      summary: List documents visible to the caller
+      parameters:
+        - { name: client_id, in: query, schema: { type: string, format: uuid } }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/DocumentStatus' }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/DocumentSummary' }
+                  total: { type: integer }
+
+  /documents/{document_id}:
+    get:
+      tags: [Documents]
+      summary: Retrieve a document with its current version
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentDetail' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /documents/{document_id}/versions:
+    get:
+      tags: [Documents]
+      summary: Full version history
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DocumentVersionSummary' }
+
+  /documents/{document_id}/evidence/{claim_id}:
+    get:
+      tags: [Documents]
+      summary: Inspect the evidence behind a cited claim
+      description: |
+        Returns the verbatim excerpt and its locator (page or character range) exactly as
+        captured from the source. This is what the RM sees when inspecting a citation
+        (FR-024). The excerpt is never paraphrased.
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: claim_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenceClaim' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /documents/{document_id}/reject:
+    post:
+      tags: [Documents]
+      summary: Reject the current draft
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 2000 }
+      responses:
+        '200':
+          description: Rejected; recorded in the audit trail with actor and timestamp
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentDetail' }
+        '409':
+          description: Document is already APPROVED (terminal)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ─────────────────────────── Sections ───────────────────────────
+
+  /documents/{document_id}/sections/{section_key}:
+    patch:
+      tags: [Sections]
+      summary: Edit a section inline
+      description: |
+        Creates a new `RM_EDITED` version. The edit is attributed to the acting RM and is
+        distinguishable from AI-generated content in the audit record (FR-022).
+
+        Requires `If-Match` carrying the current version's `content_hash`. A stale value
+        returns 412 rather than silently overwriting a concurrent edit (FR-040).
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: section_key, in: path, required: true, schema: { type: string } }
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string }
+          description: content_hash of the version being edited
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+                resolved_gaps:
+                  type: array
+                  items:
+                    type: object
+                    required: [field, resolution_note]
+                    properties:
+                      field: { type: string }
+                      resolution_note: { type: string }
+      responses:
+        '200':
+          description: Edited; new version created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentDetail' }
+        '409':
+          description: Document is APPROVED and cannot be edited
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '412':
+          description: Stale content_hash — another session edited this document (FR-040)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '451':
+          description: The edited content failed Shariah screening
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScreeningBlockedError' }
+
+  /documents/{document_id}/sections/{section_key}/regenerate:
+    post:
+      tags: [Sections]
+      summary: Regenerate a single section
+      description: |
+        Regenerates one section against the existing Evidence Ledger without discarding
+        accepted content elsewhere in the document (FR-023). Creates a
+        `REGENERATED_SECTION` version.
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: section_key, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                instruction: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Section regenerated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentDetail' }
+        '422':
+          description: Regenerated section failed deterministic validation; prior version retained
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '451':
+          description: Regenerated section failed Shariah screening
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScreeningBlockedError' }
+
+  # ─────────────────────────── Approval ───────────────────────────
+
+  /documents/{document_id}/approve:
+    post:
+      tags: [Approval]
+      summary: Approve a document — the only path to APPROVED
+      description: |
+        The single transition into `APPROVED`, and the constitutional heart of this API
+        (Principle III).
+
+        Every one of these must hold, or the request is refused:
+
+        - the caller's role is `RM` **and** they own the client's portfolio (403 otherwise);
+        - `content_hash` matches the current version exactly — the RM approves a specific
+          version, not "the document" (412 otherwise);
+        - zero unresolved gaps remain across all sections (422 otherwise, FR-025);
+        - the current version passed deterministic screening (451 otherwise);
+        - the document is not already approved (409 otherwise).
+
+        `acknowledge_gaps` lets the RM accept a gap deliberately, with a note. It resolves the
+        gap — it does not bypass the check. The acknowledgement is recorded in the approval.
+
+        There is no timeout, default, inactivity, or administrative path to this state
+        (FR-027).
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content_hash, confirm_reviewed]
+              properties:
+                content_hash:
+                  type: string
+                  description: Hash of the exact version being approved
+                confirm_reviewed:
+                  type: boolean
+                  enum: [true]
+                  description: |
+                    Explicit affirmation that the RM has reviewed the content and accepts
+                    authorship. Must be literally true — a deliberate act, not a default.
+                acknowledge_gaps:
+                  type: array
+                  items:
+                    type: object
+                    required: [section_key, field, note]
+                    properties:
+                      section_key: { type: string }
+                      field: { type: string }
+                      note: { type: string }
+      responses:
+        '200':
+          description: Approved; ApprovalRecord and audit event written
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalRecord' }
+        '403':
+          description: Caller is not an RM, or does not own this client's portfolio
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Already approved (terminal state)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '412':
+          description: content_hash does not match the current version
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Unresolved gaps remain (FR-025)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UnresolvedGapsError' }
+        '451':
+          description: Current version has not passed Shariah screening
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScreeningBlockedError' }
+
+  # ──────────────────────────── Export ────────────────────────────
+
+  /documents/{document_id}/export:
+    get:
+      tags: [Export]
+      summary: Export an approved document
+      description: |
+        Only `APPROVED` documents export. The rendered file embeds the approval record
+        (approver, timestamp, content hash), the Shariah review status, and AI-assisted
+        attribution (FR-036). Exporting is itself an audit event.
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: format
+          in: query
+          schema: { type: string, enum: [docx, pdf], default: docx }
+      responses:
+        '200':
+          description: Rendered document
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema: { type: string, format: binary }
+            application/pdf:
+              schema: { type: string, format: binary }
+        '409':
+          description: Document is not APPROVED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ───────────────────────────── Audit ────────────────────────────
+
+  /audit/events:
+    get:
+      tags: [Audit]
+      summary: Query the audit trail
+      description: |
+        Read-only. Requires `COMPLIANCE` role (FR-034). There is no create, update, or delete
+        counterpart anywhere in this API — the backing database role holds INSERT and SELECT
+        only (FR-032, R6).
+      parameters:
+        - { name: document_id, in: query, schema: { type: string, format: uuid } }
+        - { name: client_reference, in: query, schema: { type: string } }
+        - { name: actor_id, in: query, schema: { type: string, format: uuid } }
+        - { name: event_type, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AuditEvent' }
+                  total: { type: integer }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /audit/documents/{document_id}/lifecycle:
+    get:
+      tags: [Audit]
+      summary: Full reconstructable lifecycle of one document
+      description: |
+        The Compliance reconstruction view (US4). Returns every generation, edit,
+        regeneration, rejection, screening block, and approval in order, with the inputs,
+        model, template, and prompt versions used at each step — enough to answer "how was
+        this produced" without reading the code (Principle VIII, SC-013).
+      parameters:
+        - { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentLifecycle' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /audit/export:
+    get:
+      tags: [Audit]
+      summary: Export audit records in a machine-readable format
+      description: Satisfies FR-035. The export is itself recorded as an `AUDIT_EXPORTED` event.
+      parameters:
+        - { name: document_id, in: query, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, csv], default: json }
+      responses:
+        '200':
+          description: Exported records
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditEvent' }
+            text/csv:
+              schema: { type: string }
+
+  /audit/verify:
+    get:
+      tags: [Audit]
+      summary: Verify audit chain integrity
+      description: |
+        Recomputes the hash chain end to end. A broken link proves tampering and identifies
+        the first affected sequence number. This is what turns the audit trail from
+        tamper-*discouraged* into tamper-*evident* (R6).
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid, events_checked]
+                properties:
+                  valid: { type: boolean }
+                  events_checked: { type: integer }
+                  first_broken_sequence:
+                    type: integer
+                    nullable: true
+                    description: Null when the chain is intact
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Authenticated but not permitted for this resource
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not found, or not visible to this caller
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    DocumentType:
+      type: string
+      enum: [CALL_REPORT, CLIENT_PROFILE, CREDIT_MEMO_NARRATIVE, KYC_SUMMARY]
+
+    DocumentStatus:
+      type: string
+      enum: [DRAFT, UNDER_REVIEW, REJECTED, APPROVED]
+
+    ShariahStatus:
+      type: string
+      enum: [PENDING_REVIEW, CLEARED, FLAGGED]
+      description: |
+        Defaults to PENDING_REVIEW and is never set to CLEARED by the system. The system
+        prepares documents for Shariah review; it does not clear them (Principle II).
+
+    Confidence:
+      type: string
+      enum: [HIGH, MEDIUM, LOW]
+
+    User:
+      type: object
+      required: [id, email, full_name, role]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        full_name: { type: string }
+        role: { type: string, enum: [RM, TEAM_LEAD, COMPLIANCE, SHARIAH_REVIEWER] }
+        team_id: { type: string, format: uuid, nullable: true }
+
+    ClientSummary:
+      type: object
+      required: [id, client_reference, legal_name, sector, is_synthetic]
+      properties:
+        id: { type: string, format: uuid }
+        client_reference: { type: string }
+        legal_name: { type: string }
+        trade_name: { type: string, nullable: true }
+        sector: { type: string }
+        relationship_since: { type: string, format: date, nullable: true }
+        kyc_status: { type: string, enum: [COMPLETE, PENDING, EXPIRED] }
+        is_synthetic:
+          type: boolean
+          enum: [true]
+          description: Always true. Enforced by database CHECK constraint (FR-041).
+
+    AssembledContext:
+      type: object
+      description: What the system knows, shown before it writes anything (FR-003).
+      required: [client_id, document_type, sources]
+      properties:
+        client_id: { type: string, format: uuid }
+        document_type: { $ref: '#/components/schemas/DocumentType' }
+        required_inputs:
+          type: array
+          items: { type: string }
+        sources:
+          type: array
+          items:
+            type: object
+            required: [source_id, source_type, label, is_external]
+            properties:
+              source_id: { type: string, format: uuid }
+              source_type: { type: string, enum: [CLIENT_RECORD, UPLOADED_DOCUMENT] }
+              source_system: { type: string }
+              label: { type: string }
+              effective_date: { type: string, format: date, nullable: true }
+              is_external:
+                type: boolean
+                description: External-derived content is visually distinguished (FR-014).
+        conflicts:
+          type: array
+          description: Surfaced, never silently resolved (FR-013).
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              values:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    source_id: { type: string, format: uuid }
+                    value: { type: string }
+
+    SourceDocument:
+      type: object
+      required: [id, filename, media_type, size_bytes, trust_level]
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        title: { type: string, nullable: true }
+        media_type: { type: string }
+        size_bytes: { type: integer }
+        page_count: { type: integer, nullable: true }
+        content_hash: { type: string }
+        trust_level:
+          type: string
+          enum: [UNTRUSTED]
+          description: |
+            Single-valued by design. Uploaded content is data, never instruction (FR-007, R7).
+        uploaded_at: { type: string, format: date-time }
+
+    GapMarker:
+      type: object
+      description: |
+        A first-class output state, not an error. Rendered visibly to the RM; blocks approval
+        until resolved or explicitly acknowledged (FR-025).
+      required: [field, label, resolved]
+      properties:
+        field: { type: string }
+        label:
+          type: string
+          example: '[MISSING: audited turnover FY2025]'
+        resolved: { type: boolean }
+        resolution_note: { type: string, nullable: true }
+
+    EvidenceClaim:
+      type: object
+      required: [claim_id, claim_text, source_type, verbatim_excerpt]
+      properties:
+        claim_id: { type: string }
+        claim_text: { type: string }
+        source_type:
+          type: string
+          enum: [CLIENT_RECORD, UPLOADED_DOCUMENT, MEETING_NOTES]
+        source_id: { type: string, format: uuid, nullable: true }
+        source_label: { type: string }
+        locator:
+          type: object
+          description: Page range for PDFs, character range for text.
+          properties:
+            page_start: { type: integer, nullable: true }
+            page_end: { type: integer, nullable: true }
+            char_start: { type: integer, nullable: true }
+            char_end: { type: integer, nullable: true }
+        verbatim_excerpt:
+          type: string
+          description: The exact cited span. Never paraphrased.
+        is_external: { type: boolean }
+
+    DocumentSection:
+      type: object
+      required: [section_key, title, ordinal, evidence_refs, gaps, confidence]
+      properties:
+        section_key: { type: string }
+        title: { type: string }
+        ordinal: { type: integer }
+        content:
+          type: string
+          nullable: true
+          description: Null when the section is entirely a gap.
+        evidence_refs:
+          type: array
+          items: { type: string }
+          description: |
+            claim_ids. Every one is validated against the ledger before the section is
+            returned; an unresolvable reference converts the section to a gap (FR-011, R3).
+        gaps:
+          type: array
+          items: { $ref: '#/components/schemas/GapMarker' }
+        confidence: { $ref: '#/components/schemas/Confidence' }
+        is_rm_edited: { type: boolean }
+        contains_external_data: { type: boolean }
+
+    DocumentSummary:
+      type: object
+      required: [id, client_id, document_type, status, shariah_status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        client_id: { type: string, format: uuid }
+        client_reference: { type: string }
+        document_type: { $ref: '#/components/schemas/DocumentType' }
+        status: { $ref: '#/components/schemas/DocumentStatus' }
+        shariah_status: { $ref: '#/components/schemas/ShariahStatus' }
+        created_by: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+
+    DocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/DocumentSummary'
+        - type: object
+          required: [version_number, content_hash, sections, ai_generated, unresolved_gap_count]
+          properties:
+            version_number: { type: integer }
+            content_hash:
+              type: string
+              description: Echo this to PATCH (If-Match) and to approve.
+            ai_generated:
+              type: boolean
+              enum: [true]
+              description: AI-generated content is labelled at all times (FR-020).
+            template_version: { type: string }
+            prompt_version: { type: string }
+            model_id: { type: string, nullable: true }
+            sections:
+              type: array
+              items: { $ref: '#/components/schemas/DocumentSection' }
+            unresolved_gap_count:
+              type: integer
+              description: Approval is blocked while this is greater than zero (FR-025).
+            screening:
+              type: object
+              properties:
+                outcome: { type: string, enum: [PASS, BLOCKED, FLAGGED] }
+                vocabulary_version: { type: string }
+                findings:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      term: { type: string }
+                      section_key: { type: string }
+                      severity: { type: string }
+                      rule_id: { type: string }
+
+    DocumentVersionSummary:
+      type: object
+      required: [id, version_number, origin, created_by, content_hash, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        version_number: { type: integer }
+        origin: { type: string, enum: [GENERATED, REGENERATED_SECTION, RM_EDITED] }
+        created_by: { type: string, format: uuid }
+        created_by_name: { type: string }
+        content_hash: { type: string }
+        model_id: { type: string, nullable: true }
+        template_version: { type: string }
+        prompt_version: { type: string }
+        created_at: { type: string, format: date-time }
+
+    ApprovalRecord:
+      type: object
+      required: [id, document_id, version_id, approved_by, approver_name, approver_role, content_hash, approved_at]
+      properties:
+        id: { type: string, format: uuid }
+        document_id: { type: string, format: uuid }
+        version_id: { type: string, format: uuid }
+        approved_by: { type: string, format: uuid }
+        approver_name:
+          type: string
+          description: Snapshotted, so the record survives changes to the user account.
+        approver_role: { type: string, enum: [RM] }
+        content_hash: { type: string }
+        shariah_status_at_approval: { $ref: '#/components/schemas/ShariahStatus' }
+        gaps_acknowledged:
+          type: array
+          items:
+            type: object
+            properties:
+              section_key: { type: string }
+              field: { type: string }
+              note: { type: string }
+        approved_at: { type: string, format: date-time }
+
+    AuditEvent:
+      type: object
+      required: [id, sequence, event_type, occurred_at, event_hash]
+      properties:
+        id: { type: string, format: uuid }
+        sequence: { type: integer, format: int64 }
+        event_type: { type: string }
+        occurred_at: { type: string, format: date-time }
+        actor_id: { type: string, format: uuid, nullable: true }
+        actor_name: { type: string, nullable: true }
+        client_reference: { type: string, nullable: true }
+        document_id: { type: string, format: uuid, nullable: true }
+        version_id: { type: string, format: uuid, nullable: true }
+        document_type: { type: string, nullable: true }
+        input_source_ids:
+          type: array
+          items: { type: string }
+        model_id: { type: string, nullable: true }
+        model_version: { type: string, nullable: true }
+        prompt_version: { type: string, nullable: true }
+        template_version: { type: string, nullable: true }
+        output_hash: { type: string, nullable: true }
+        detail:
+          type: object
+          description: |
+            Identifiers and counts only. Never document content, client-bearing prompt text,
+            or credentials (FR-042, NFR-SEC-04).
+          additionalProperties: true
+        prev_hash: { type: string, nullable: true }
+        event_hash: { type: string }
+
+    DocumentLifecycle:
+      type: object
+      required: [document, events, versions]
+      properties:
+        document: { $ref: '#/components/schemas/DocumentSummary' }
+        versions:
+          type: array
+          items: { $ref: '#/components/schemas/DocumentVersionSummary' }
+        approval:
+          allOf: [{ $ref: '#/components/schemas/ApprovalRecord' }]
+          nullable: true
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEvent' }
+        chain_valid:
+          type: boolean
+          description: Hash chain integrity across this document's events.
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message:
+          type: string
+          description: |
+            Plain, non-technical, and actionable — the RM must understand what happened and
+            what to do next (FR-038, NFR-UX-02).
+        detail: { type: object, additionalProperties: true }
+
+    ScreeningBlockedError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            vocabulary_version: { type: string }
+            findings:
+              type: array
+              items:
+                type: object
+                properties:
+                  term: { type: string }
+                  section_key: { type: string }
+                  severity: { type: string }
+                  rule_id: { type: string }
+                  rationale: { type: string }
+
+    UnresolvedGapsError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            unresolved_gaps:
+              type: array
+              items:
+                type: object
+                properties:
+                  section_key: { type: string }
+                  field: { type: string }
+                  label: { type: string }

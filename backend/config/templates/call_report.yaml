@@ -1,0 +1,88 @@
+# Call Report / Meeting Minutes — DT1 (spec.md §5)
+#
+# The approved section structure for a client call report. Changing this file is a
+# template change: bump `version`, because every approved document links to the exact
+# template version that produced it (FR-033).
+#
+# Adding a new document type means adding a file like this one plus a prompt artifact
+# plus a Pydantic schema — no change to the generation engine (NFR-SCA-01).
+
+document_type: CALL_REPORT
+version: "1.0.0"
+display_name: "Client Call Report"
+prompt_template_ref: "config/prompts/call_report/v1.0.0"
+screening_profile: standard
+
+# The RM must supply meeting notes. Generation is refused without them: a call report
+# assembled purely from stored records would be a record of a meeting nobody described.
+required_inputs:
+  - meeting_notes
+
+sections:
+  - key: meeting_metadata
+    title: "Meeting Details"
+    required: true
+    guidance: >
+      Client name, date of meeting, attendees on both sides, and the channel
+      (in person, call, video). State only what the notes record. If an attendee list
+      or channel is not stated, mark it missing rather than assuming.
+    max_words: 120
+
+  - key: purpose
+    title: "Purpose of Meeting"
+    required: true
+    guidance: >
+      Why the meeting was held, in one or two sentences. If the notes do not state a
+      purpose, do not infer one from what was discussed.
+    max_words: 100
+
+  - key: discussion_summary
+    title: "Discussion Summary"
+    required: true
+    guidance: >
+      A professional narrative of what was discussed, in the order it was raised.
+      Convert fragments into full sentences without adding facts. Every figure must
+      come from the notes.
+    max_words: 500
+
+  - key: client_requirements
+    title: "Client Requirements and Requests"
+    required: true
+    guidance: >
+      What the client asked for. Include indicative amounts and timelines only where
+      the notes state them.
+    max_words: 250
+
+  - key: products_discussed
+    title: "Products Discussed"
+    required: true
+    guidance: >
+      Islamic products and structures referenced. Use approved terminology only. If a
+      product cannot be mapped to an approved structure, flag it rather than naming a
+      structure the client did not discuss.
+    max_words: 200
+
+  - key: risks_and_concerns
+    title: "Risks, Concerns and Red Flags"
+    required: true
+    guidance: >
+      Any risk, concern, or adverse signal raised. This section is often the most
+      valuable part of the record — do not soften it. If nothing was raised, say so
+      explicitly rather than leaving it empty.
+    max_words: 250
+
+  - key: action_items
+    title: "Agreed Action Items"
+    required: true
+    guidance: >
+      Each action with its owner and target date where stated. Where a target date was
+      not agreed, mark it missing rather than proposing one.
+    max_words: 300
+
+  - key: next_steps
+    title: "Next Steps and Follow-Up"
+    required: true
+    guidance: >
+      The agreed next contact and follow-up date. If no follow-up date was agreed, this
+      MUST be recorded as missing. Do not propose a date.
+    max_words: 150
