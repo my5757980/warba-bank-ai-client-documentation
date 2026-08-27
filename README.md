@@ -6,6 +6,29 @@ visibly marked missing, and no document is approved without a named human.
 
 > 📄 **[SUBMISSION.md](./SUBMISSION.md)** — the challenge submission
 > 📐 **[specs/001-ai-client-documentation/](./specs/001-ai-client-documentation/)** — specification, research, plan
+> ▶️ **[60-second demo video](./demo/warba-client-documentation.mp4)** — the running system
+
+---
+
+## See it working
+
+Every image below is the real application against a real database and a real model call.
+Nothing is mocked or staged. Full walkthrough: **[demo video](./demo/warba-client-documentation.mp4)** (60s).
+
+**Every sentence carries its sources — and what the notes did not say is marked missing,
+not invented.**
+
+![A section of a generated call report showing source chips and an amber MISSING marker](./demo/stills/06-gap-marker.png)
+
+**Unresolved gaps block approval outright.** The button is disabled and every missing item
+is listed by name. There is no override, and no timer that approves anything on its own.
+
+![The approval dialog refusing to proceed, listing four unresolved gaps](./demo/stills/07-approval-blocked.png)
+
+**Shariah screening stops a non-compliant draft before it exists** — a deterministic word
+list over a reviewable YAML file, with every finding citing its rule ID.
+
+![A draft blocked by Shariah screening, listing five prohibited terms with rule IDs](./demo/stills/10-shariah-block.png)
 
 ---
 
