@@ -1,0 +1,29 @@
+I built an AI system for the Warba Bank Corporate Banking AI Challenge, and the interesting problem turned out not to be the writing.
+
+A Relationship Manager can write a client call report in an hour. What a bank cannot accept is a fluent, confident, wrong number sitting inside it — or a conventional interest product described as if it were Islamic.
+
+So the real question was never "can AI write this faster." It was: how do you make "it didn't hallucinate" something you can check, instead of something you have to hope for?
+
+Four answers, all enforced by code rather than by prompt:
+
+1 — Two-pass generation.
+The first pass extracts claims and verifies each one against the source. The second pass writes the document from that verified ledger and never sees the raw sources at all — so it cannot cite what isn't there. A structural guarantee, not an instruction.
+
+2 — If the model can't quote it, the system deletes it.
+The model supplies a verbatim quote; our own code then searches the real source text for it. No fuzzy matching — a single altered digit fails. Unsupported claims never reach the page.
+
+3 — What the notes didn't say is marked MISSING, not invented.
+Gaps appear in amber, inside the document, and they block approval outright. The button is disabled and every missing item is listed by name. No override, and no timer that quietly approves anything.
+
+4 — Shariah screening is a deterministic gate, not a prompt.
+A reviewable word list that compliance can audit without reading code. Non-compliant terminology stops the draft before it exists, and every finding cites its rule ID.
+
+Underneath: audit immutability enforced by database privilege — the application role holds INSERT and SELECT only, UPDATE and DELETE are never granted. Synthetic-only client data enforced by a CHECK constraint. 226 tests.
+
+Every frame in this video is the real application against a real database and a real model call. Nothing is mocked or staged.
+
+FastAPI · PostgreSQL · React · Claude and Gemini behind a single port interface.
+
+Built spec-first: constitution → spec → plan → tasks → implementation, with every architectural decision written down before it was coded.
+
+#AI #Banking #IslamicFinance #FinTech #Kuwait #SoftwareEngineering
