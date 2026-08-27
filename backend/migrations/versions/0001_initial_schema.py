@@ -230,7 +230,13 @@ def upgrade() -> None:
     op.create_table(
         "audit_event",
         sa.Column("id", UUID, primary_key=True),
-        sa.Column("sequence", sa.BigInteger(), sa.Identity(always=False), nullable=False, unique=True),
+        sa.Column(
+            "sequence",
+            sa.BigInteger(),
+            sa.Identity(always=False),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("event_type", sa.String(64), nullable=False),
         sa.Column("occurred_at", TS, nullable=False, server_default=sa.func.now()),
         sa.Column("actor_id", UUID, nullable=True),

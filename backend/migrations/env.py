@@ -17,14 +17,14 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.config import get_settings
-from app.db import Base
-
-# Every model must be imported so `Base.metadata` is complete before autogenerate runs.
-# A model missing here produces a migration that silently omits its table.
+# The `models` imports below are side-effecting and deliberately unused: every model must
+# be imported so `Base.metadata` is complete before autogenerate runs. A model missing
+# here produces a migration that silently omits its table.
 from app.audit import models as _audit_models  # noqa: F401
 from app.auth import models as _auth_models  # noqa: F401
 from app.clients import models as _client_models  # noqa: F401
+from app.config import get_settings
+from app.db import Base
 from app.documents import models as _document_models  # noqa: F401
 from app.evidence import models as _evidence_models  # noqa: F401
 from app.screening import models as _screening_models  # noqa: F401

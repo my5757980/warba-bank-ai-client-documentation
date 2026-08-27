@@ -4,7 +4,11 @@
 
 **Track**: 1 — AI-Powered Client Documentation
 **Status**: Working prototype, end-to-end, on synthetic data
-**Repository**: `specs/001-ai-client-documentation/` (specification, plan, tasks) · `backend/` · `frontend/`
+**Submitted by**: Muhammad Yaseen ([@my5757980](https://github.com/my5757980))
+**Repository**: https://github.com/my5757980/warba-bank-ai-client-documentation
+**Demo video**: [60-second walkthrough of the running system](./demo/warba-client-documentation.mp4) — real application, real database, real model call; nothing mocked or staged
+
+**Where to look**: [`specs/001-ai-client-documentation/`](./specs/001-ai-client-documentation/) (specification, research, plan, tasks) · [`backend/`](./backend/) · [`frontend/`](./frontend/) · §7 below is a guided tour of the repository.
 
 ---
 
