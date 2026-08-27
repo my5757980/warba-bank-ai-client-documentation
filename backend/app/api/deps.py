@@ -21,6 +21,11 @@ def _adapter() -> GenerationPort:
     """
     provider = get_settings().model_provider
 
+    if provider == "demo":
+        from app.adapters.demo_adapter import DemoAdapter
+
+        return DemoAdapter()
+
     if provider == "gemini":
         from app.adapters.gemini_adapter import GeminiAdapter
 

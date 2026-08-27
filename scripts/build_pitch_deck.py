@@ -87,7 +87,9 @@ COVER = f"""
     <dt>Submitted by</dt><dd>Muhammad Yaseen — AI Engineer, K Com Solution</dd>
     <dt>Repository</dt><dd><a href="{REPO}">{REPO}</a></dd>
     <dt>Demo video</dt><dd>60-second walkthrough — {VIDEO_NOTE}</dd>
-    <dt>Status</dt><dd>Working prototype, end to end, on synthetic data · 226 tests</dd>
+    <dt>Status</dt><dd>Working prototype, end to end, on synthetic data · 247 tests</dd>
+    <dt>To run it</dt><dd>No API key needed — the repository ships in keyless demo mode.
+      Four commands in the README quick start. See §7.</dd>
   </dl>
 </section>
 """

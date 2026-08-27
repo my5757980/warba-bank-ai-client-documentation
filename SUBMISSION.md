@@ -23,7 +23,7 @@ this submission does not ask to be read as though it were. What I would put forw
 instead is the artifact itself, because it is checkable in a way a CV is not:
 
 - **The whole system is public and runnable.** Repository, specification, research notes,
-  architecture decisions, and 226 tests. Clone it and run it — the quick start is four
+  architecture decisions, and 247 tests. Clone it and run it — the quick start is four
   commands.
 - **The hard guarantees are enforced by code, not asserted in prose.** Audit immutability
   is a database privilege. Synthetic-only data is a CHECK constraint. Provider portability
@@ -343,8 +343,32 @@ Two smaller items:
 
 ## 7. Repository guide
 
+### Running it yourself — no API key needed
+
+The repository ships with `MODEL_PROVIDER=demo`: a keyless, deterministic adapter
+(`backend/app/adapters/demo_adapter.py`) that quotes the supplied sources literally
+instead of calling a model. It is **not** a language model and makes no claim to be —
+the prose is plain. What it does is let a reviewer exercise the real system in four
+commands, with no credential, no cost, and no network.
+
+Nothing downstream is bypassed. Demo output travels the same path as a model's: the same
+evidence validation, the same numeric tracing, the same deterministic Shariah gate, the
+same approval preconditions, the same hash-chained audit, the same DOCX export. Because
+every excerpt is copied from the source rather than generated, each citation can be
+checked by eye.
+
+Verified end to end on this adapter against a live database: 8 sections, 7 resolving
+citations, 2 gaps correctly marked, approval blocked until they were resolved, and a
+Shariah-violating input refused with HTTP 451 citing SH-012, SH-002b and SH-001.
+
+Set `MODEL_PROVIDER=anthropic` or `gemini` (with the matching key) for real drafting
+quality. The `README.md` quick start covers both.
+
+### Where things live
+
 | Path | What it holds |
 |---|---|
+| `backend/app/adapters/demo_adapter.py` | The keyless adapter — run the system without a key |
 | `.specify/memory/constitution.md` | Eight non-negotiable principles, v1.0.0 |
 | `specs/001-ai-client-documentation/spec.md` | Full PRD — 44 requirements, 30 NFRs |
 | `specs/001-ai-client-documentation/research.md` | 14 technical decisions with rejected alternatives |

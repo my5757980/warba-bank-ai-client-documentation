@@ -42,7 +42,10 @@ class Settings(BaseSettings):
     # `app.api.deps` does, to choose an adapter. Both adapters uphold the same
     # contract; they differ in how grounding provenance is obtained (research.md R9,
     # and the Gemini adapter's module docstring).
-    model_provider: Literal["anthropic", "gemini"] = "anthropic"
+    # "demo" is a keyless, deterministic adapter that quotes the sources literally. It
+    # exists so the system can be run end to end without a credential; it is not a model
+    # and produces no prose. See app/adapters/demo_adapter.py.
+    model_provider: Literal["anthropic", "gemini", "demo"] = "anthropic"
 
     # Left as None deliberately: the Anthropic SDK resolves ANTHROPIC_API_KEY,
     # ANTHROPIC_AUTH_TOKEN, or an `ant auth login` profile on its own. Forcing a

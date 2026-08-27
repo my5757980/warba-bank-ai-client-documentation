@@ -41,7 +41,7 @@ terminology stops the draft *before it exists*, and every finding cites its rule
 
 Underneath: audit immutability enforced by database privilege (the application role holds
 INSERT and SELECT only — UPDATE and DELETE are never granted), synthetic-only client data
-enforced by a CHECK constraint, and provider portability enforced by lint. 226 tests.
+enforced by a CHECK constraint, and provider portability enforced by lint. 247 tests.
 
 Everything in the video is the real application against a real database and a real model
 call. Nothing is mocked or staged.
@@ -73,7 +73,7 @@ approval outright. No override.
 stops a non-compliant draft before it exists.
 
 Audit trail immutability is enforced by database privilege, not by convention. Synthetic-
-only data by a CHECK constraint. 226 tests.
+only data by a CHECK constraint. 247 tests.
 
 Every frame in this video is the real app against a real database and a real model call.
 

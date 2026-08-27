@@ -45,6 +45,13 @@ discarded rather than shown.
 
 ## Quick start
 
+> **No API key required.** `.env.example` ships with `MODEL_PROVIDER=demo`, a keyless
+> deterministic adapter that quotes the sources literally. It is not a language model and
+> the prose is plain — but it exercises the *real* pipeline: grounding, citations, gap
+> marking, the Shariah gate, approval, the hash-chained audit, and DOCX export all behave
+> exactly as they do with Claude or Gemini. Set `MODEL_PROVIDER=anthropic` or `gemini`
+> (and the matching key) when you want real drafting quality.
+
 ```bash
 # 1. Database
 docker compose up -d
@@ -65,8 +72,13 @@ cd ../frontend && npm install && cp .env.example .env.local && npm run dev
 
 API docs: http://localhost:8000/docs · App: http://localhost:5173
 
-If you have run `ant auth login`, leave `ANTHROPIC_API_KEY` unset — the SDK resolves the
-stored profile automatically.
+Sign in as `sara.rm@warba.demo` / `Demo!2026`, pick **Al-Sabah Trading Company**, paste any
+meeting notes, and generate. To see the Shariah gate refuse a draft, include a phrase like
+*"conventional term loan at a fixed interest rate"* — it returns HTTP 451 with the rule
+IDs, and no document is created.
+
+If you switch to `MODEL_PROVIDER=anthropic` and have run `ant auth login`, leave
+`ANTHROPIC_API_KEY` unset — the SDK resolves the stored profile automatically.
 
 ### Demo accounts
 
