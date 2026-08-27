@@ -17,6 +17,7 @@
  */
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { DocumentDetail, Gap } from "@/types/api";
 
 interface Props {
@@ -42,7 +43,13 @@ export function ApprovalDialog({ document, onConfirm, onCancel, submitting }: Pr
 
   const blocked = openGaps.length > 0;
 
-  return (
+  // Rendered into <body> rather than in place. An ancestor with any transform — including
+  // the identity transform an entrance animation leaves behind — becomes the containing
+  // block for `position: fixed`, which would strand the dialog partway down a long
+  // document instead of centring it on screen. A portal is immune to that.
+  //
+  // `globalThis.document` because the `document` prop shadows the global here.
+  return createPortal(
     <div className="dialog-backdrop" role="dialog" aria-modal="true" aria-label="Approve document">
       <div className="dialog">
         <h2>Approve this document</h2>
@@ -116,6 +123,7 @@ export function ApprovalDialog({ document, onConfirm, onCancel, submitting }: Pr
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    globalThis.document.body,
   );
 }

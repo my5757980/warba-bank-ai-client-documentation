@@ -92,7 +92,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const payload: ApiError = body?.detail ?? body ?? {};
+    // Two error shapes reach us. Our own handlers return the error flat —
+    // `{ code, message, detail }` — where `detail` carries the payload the UI needs
+    // (the Shariah findings, for instance). FastAPI's built-in HTTPException instead
+    // nests the whole error under `detail`.
+    //
+    // Unwrap only the nested shape, and identify it by the presence of `code` inside
+    // `detail`. Unwrapping unconditionally discards our own `code` and `message` and
+    // hands the UI the findings object in their place — which is how a Shariah block
+    // came to read "The request could not be completed."
+    const nested =
+      body?.detail && typeof body.detail === "object" && "code" in body.detail;
+    const payload: ApiError = (nested ? body.detail : body) ?? {};
     throw new RequestError(
       response.status,
       payload.code ?? "UNKNOWN",

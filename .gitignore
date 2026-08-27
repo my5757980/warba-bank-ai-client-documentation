@@ -38,3 +38,13 @@ Thumbs.db
 .idea/
 *.swp
 *.tmp
+
+# Playwright MCP session scratch (snapshots, console logs)
+.playwright-mcp/
+
+# Incremental TypeScript build info
+*.tsbuildinfo
+
+# Intermediate video frames — regenerate with scripts/build_video.py
+demo/build/
+demo/raw/

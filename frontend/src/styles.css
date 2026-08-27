@@ -329,21 +329,30 @@ main {
   margin: 0 auto;
   padding: 2rem 1.75rem 4rem;
   flex: 1;
-  animation: rise var(--t-slow) var(--ease) both;
+  /* `backwards`, not `both`: `both` retains the animation's end transform forever, and
+     any transform on <main> makes it the containing block for fixed-position
+     descendants. `backwards` still hides the pre-animation frame, then leaves no
+     transform behind once it finishes. */
+  animation: rise var(--t-slow) var(--ease) backwards;
 }
 
 /* ----------------------------------------------------------------- login */
 
+/* Centred rather than left-aligned in the content column: the sign-in screen has
+   no navigation and no surrounding content, so anchoring it left leaves the page
+   looking unfinished. */
 .login {
   max-width: 400px;
-  padding-top: 8vh;
+  margin: 0 auto;
+  padding-top: 7vh;
   animation: pop var(--t-slow) var(--ease) both;
 }
 .login h1 {
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  text-wrap: balance;
 }
 .login h1::before {
   content: "";
