@@ -12,6 +12,41 @@
 
 ---
 
+## 0. Team background and technical credentials
+
+**Muhammad Yaseen** — AI Engineer, K Com Solution. Eight months professional experience.
+Sole builder of this submission: specification, architecture, backend, frontend, and
+evaluation harness.
+
+I will be straightforward about what that means. Eight months is not a long career, and
+this submission does not ask to be read as though it were. What I would put forward
+instead is the artifact itself, because it is checkable in a way a CV is not:
+
+- **The whole system is public and runnable.** Repository, specification, research notes,
+  architecture decisions, and 226 tests. Clone it and run it — the quick start is four
+  commands.
+- **The hard guarantees are enforced by code, not asserted in prose.** Audit immutability
+  is a database privilege. Synthetic-only data is a CHECK constraint. Provider portability
+  is a lint rule. Each of those is a claim a reviewer can falsify in under a minute, which
+  is the only kind of claim worth making to a bank.
+- **The decisions are written down before the code, and the reasoning is preserved.**
+  `specs/001-ai-client-documentation/research.md` records fourteen technical decisions with
+  their alternatives and trade-offs — including the API constraint that forced the two-pass
+  architecture (R2, R3).
+- **The known limits are stated, not hidden.** §6 separates what has been verified against
+  a live stack from what has not.
+
+What I do not have is production banking experience, and there will be domain judgement in
+this system that a Warba Bank reviewer will improve on immediately. The Shariah vocabulary
+in `backend/config/vocabulary.yaml` is the clearest example: it is deliberately a plain,
+reviewable YAML file precisely so that a Shariah officer — not an engineer — can own it.
+That mentorship is the part of this challenge I want most.
+
+**Built with**: Python 3.12 · FastAPI · SQLAlchemy 2.0 · PostgreSQL 16 · React 18 ·
+TypeScript · Anthropic Claude and Google Gemini behind a single port interface.
+
+---
+
 ## 1. The problem we are solving
 
 RMs spend 70–75% of their time on preparation, CRM updates, and documentation. The
@@ -45,6 +80,26 @@ call report — in five interactions.
 
 Two document types ship today (Client Call Report, Corporate Client Profile), with the
 Credit Facility Memo narrative designed and sequenced behind an accuracy gate.
+
+### The MVP, running
+
+Every image below is the real application against a real database and a real model call.
+Nothing is mocked or staged. A 60-second walkthrough is linked on the cover page.
+
+**Every sentence carries its sources — and what the notes did not say is marked missing,
+not invented.**
+
+![A generated call report section showing source chips and an amber MISSING marker](./demo/stills/06-gap-marker.png)
+
+**Unresolved gaps block approval outright.** The button is disabled and every missing item
+is listed by name. There is no override, and no timer that approves anything on its own.
+
+![The approval dialog refusing to proceed, listing four unresolved gaps](./demo/stills/07-approval-blocked.png)
+
+**Shariah screening stops a non-compliant draft before it exists** — a deterministic word
+list over a YAML file a compliance officer can read, with every finding citing its rule ID.
+
+![A draft blocked by Shariah screening, listing five prohibited terms with rule IDs](./demo/stills/10-shariah-block.png)
 
 ### The technical core: two-pass generation through an Evidence Ledger
 
