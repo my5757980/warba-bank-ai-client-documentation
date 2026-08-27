@@ -76,10 +76,35 @@ class TestEvidenceResolution:
         assert result.sections[0].content is None
         assert result.sections[0].gaps
 
-    def test_section_with_no_refs_is_untouched(self):
+    def test_content_with_no_citations_becomes_a_gap(self):
+        """Uncited content is unsourced content, and must not reach the RM.
+
+        This test previously asserted the opposite — that a section citing nothing
+        passed through untouched. That was the bug, encoded as an expectation: with a
+        provider that always returned citations the case never arose, so nothing
+        contradicted it. A second provider produced uncited sections immediately, and
+        unsourced prose reached the reviewer looking exactly like grounded prose.
+        """
         section = draft("next_steps", "Follow up next quarter.", [])
         result = validate_evidence_refs([section], [])
-        assert result.sections[0].content == "Follow up next quarter."
+
+        assert result.sections[0].content is None
+        assert result.sections[0].confidence == "LOW"
+        assert "MISSING" in result.sections[0].gaps[0]["label"]
+        assert result.issues[0].code == "UNCITED_CONTENT"
+
+    def test_uncited_is_recoverable_not_fatal(self):
+        """Like an unresolvable ref, it degrades the section rather than the document."""
+        result = validate_evidence_refs([draft("s", "Some prose.", [])], [])
+        assert not result.failed
+
+    def test_empty_section_with_no_refs_is_not_flagged(self):
+        """A section that is already a gap has nothing to cite, and is left alone."""
+        section = draft("next_steps", None, [], gaps=[{"field": "x", "label": "[MISSING: x]"}])
+        result = validate_evidence_refs([section], [])
+
+        assert result.issues == []
+        assert result.sections[0].gaps
 
 
 class TestSectionCoverage:

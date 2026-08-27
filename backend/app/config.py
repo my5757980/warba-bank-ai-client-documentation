@@ -38,11 +38,20 @@ class Settings(BaseSettings):
     jwt_expiry_minutes: int = 480
 
     # --- Model ------------------------------------------------------------
+    # Which provider backs `GenerationPort`. Business logic never reads this — only
+    # `app.api.deps` does, to choose an adapter. Both adapters uphold the same
+    # contract; they differ in how grounding provenance is obtained (research.md R9,
+    # and the Gemini adapter's module docstring).
+    model_provider: Literal["anthropic", "gemini"] = "anthropic"
+
     # Left as None deliberately: the Anthropic SDK resolves ANTHROPIC_API_KEY,
     # ANTHROPIC_AUTH_TOKEN, or an `ant auth login` profile on its own. Forcing a
     # value here would break the profile path.
     anthropic_api_key: str | None = None
     model_id: str = "claude-opus-5"
+
+    gemini_api_key: str | None = None
+    gemini_model_id: str = "gemini-3.6-flash"
     generation_effort: Literal["low", "medium", "high", "xhigh", "max"] = "high"
     generation_max_tokens: int = 64_000
 

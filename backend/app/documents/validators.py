@@ -79,12 +79,26 @@ def validate_evidence_refs(
     sections: list[SectionDraft],
     claims: list[ClaimLike],
 ) -> ValidationResult:
-    """Every `evidence_ref` must resolve to a real claim in the version's ledger.
+    """Every section with content must cite, and every citation must resolve.
 
-    An unresolvable reference means the model cited something that does not exist —
-    the content behind it is unsourced. Rather than discard the whole generation, the
-    section degrades to a gap: the RM is told the information could not be sourced,
-    which is true and useful, instead of being shown unsourced prose.
+    Two distinct failures, both meaning the same thing — the content is unsourced:
+
+    1. **Unresolvable reference** — the model cited a claim id that is not in the ledger.
+    2. **No reference at all** — the model wrote prose and cited nothing.
+
+    The second was invisible for a long time. The Anthropic path always returned
+    citations, so a section with zero `evidence_refs` never occurred and the code fell
+    through the `if not unresolved` branch straight into the output. Running the same
+    pipeline against a second provider produced exactly that case, and uncited prose
+    reached the RM looking indistinguishable from grounded prose.
+
+    FR-011 does not say "citations must resolve"; it says every factual statement must
+    be traceable to a source. A section that cites nothing satisfies the first reading
+    and fails the second, so both are handled here.
+
+    In either case the section degrades to a gap rather than discarding the whole
+    generation: the RM is told the information could not be sourced, which is true and
+    useful, instead of being shown prose with nothing behind it.
     """
     known = {c.claim_id for c in claims}
     issues: list[ValidationIssue] = []
@@ -92,23 +106,38 @@ def validate_evidence_refs(
 
     for section in sections:
         unresolved = [ref for ref in section.evidence_refs if ref not in known]
+        has_content = bool(section.content and section.content.strip())
+        uncited = has_content and not section.evidence_refs
 
-        if not unresolved:
+        if not unresolved and not uncited:
             out.append(section)
             continue
 
-        issues.append(
-            ValidationIssue(
-                code="UNRESOLVED_EVIDENCE_REF",
-                section_key=section.section_key,
-                message=(
-                    f"Section '{section.section_key}' cited "
-                    f"{len(unresolved)} claim(s) absent from the evidence ledger. "
-                    "Content converted to a gap."
-                ),
-                detail={"unresolved_refs": unresolved},
+        if uncited:
+            issues.append(
+                ValidationIssue(
+                    code="UNCITED_CONTENT",
+                    section_key=section.section_key,
+                    message=(
+                        f"Section '{section.section_key}' contains content but cites no "
+                        "evidence. Unsourced content converted to a gap."
+                    ),
+                    detail={"content_length": len(section.content or "")},
+                )
             )
-        )
+        else:
+            issues.append(
+                ValidationIssue(
+                    code="UNRESOLVED_EVIDENCE_REF",
+                    section_key=section.section_key,
+                    message=(
+                        f"Section '{section.section_key}' cited "
+                        f"{len(unresolved)} claim(s) absent from the evidence ledger. "
+                        "Content converted to a gap."
+                    ),
+                    detail={"unresolved_refs": unresolved},
+                )
+            )
 
         out.append(
             SectionDraft(

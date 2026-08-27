@@ -16,7 +16,8 @@ dependencies = [
     "sqlalchemy>=2.0.36",
     "alembic>=1.14",
     "psycopg[binary]>=3.2",
-    "anthropic>=0.40",
+    "anthropic>=1.0",
+    "google-genai>=1.0",
     "python-jose[cryptography]>=3.3",
     "bcrypt>=4.1",
     "python-multipart>=0.0.12",
@@ -59,15 +60,21 @@ ignore = [
 
 # T005 — Provider boundary (Constitution Principle VI, NFR-SCA-04).
 #
-# `anthropic` may be imported from exactly one module: app/adapters/anthropic_adapter.py.
-# Business logic depends on app/ports/generation_port.py, never on a vendor SDK.
-# This is enforced mechanically so provider substitutability is a verified property
-# rather than a matter of intent. The per-file ignore below is the single exemption.
+# Each vendor SDK may be imported from exactly one adapter module. Business logic
+# depends on app/ports/generation_port.py, never on a vendor SDK. This is enforced
+# mechanically so provider substitutability is a verified property rather than a
+# matter of intent — the per-file ignores below are the only exemptions.
+#
+# The rule earns its keep: the Gemini adapter was added without a single change to
+# the services, validators, screening, or audit layers, and this rule is what proves
+# that rather than merely asserting it.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "anthropic".msg = "Import `anthropic` only in app/adapters/anthropic_adapter.py. Business logic must depend on app.ports.generation_port.GenerationPort (Constitution VI, NFR-SCA-04)."
+"google.genai".msg = "Import `google.genai` only in app/adapters/gemini_adapter.py. Business logic must depend on app.ports.generation_port.GenerationPort (Constitution VI, NFR-SCA-04)."
 
 [tool.ruff.lint.per-file-ignores]
 "app/adapters/anthropic_adapter.py" = ["TID251"]
+"app/adapters/gemini_adapter.py" = ["TID251"]
 "tests/*" = ["TID251"]
 
 # ---------------------------------------------------------------------------
