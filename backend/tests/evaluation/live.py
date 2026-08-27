@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 
 from app.documents.templates import load_template_file
-from app.documents.validators import SectionDraft
+from app.documents.validators import SectionDraft, validate_composition
 from app.ports.types import GenerationError, GenerationRequest, GroundingScope, Source
 from app.screening.deterministic import has_blocking_findings, screen_text
 from app.screening.vocabulary import get_vocabulary
@@ -45,10 +45,14 @@ def _schema(document_type: str):
 def execute_live_case(case: EvaluationCase, adapter) -> CaseOutcome:
     """Run one case through the real two-pass pipeline.
 
-    Mirrors `GenerationService.generate` exactly: input screen → ground → compose →
-    convert to drafts → output screen. Validation is applied by the metrics themselves,
-    so a fabricated figure is *measured* here rather than raising, which is what lets
-    the harness report a count instead of just failing on the first bad case.
+    Mirrors `GenerationService.generate`: input screen → ground → compose → convert to
+    drafts → deterministic validation → output screen.
+
+    One deliberate difference from production. Production *raises* on a fatal validation
+    issue, so the first untraceable figure aborts the run; the harness needs to count
+    them across every case instead. So validation is applied — its section conversions
+    take effect exactly as they would in production — but a fatal issue is recorded
+    rather than thrown.
     """
     vocabulary = get_vocabulary()
     template = _template(case.document_type)
@@ -111,9 +115,27 @@ def execute_live_case(case: EvaluationCase, adapter) -> CaseOutcome:
             error=f"composition: {exc}",
         )
 
-    sections = _to_drafts(composed, template)
+    drafted = _to_drafts(composed, template)
 
-    # 4. Output screen — the binding gate before anything reaches an RM (FR-015).
+    # 4. Deterministic validation — exactly what GenerationService._validate runs.
+    #
+    # This step was previously missing here, which quietly made the whole harness
+    # measure the *model's* raw output instead of the system's. It matters most for
+    # citation resolution: a section the model returns with content but no evidence ref
+    # is converted to a gap in production and never reaches an RM, so scoring it as a
+    # delivered-but-uncited section describes a document nobody is ever shown.
+    #
+    # Validation is applied but not raised on. Production fails closed on an untraceable
+    # figure; the harness needs to *count* those instead, which is the whole point of
+    # measuring rather than asserting.
+    validation = validate_composition(drafted, ledger.claims, template_required_keys(template))
+    sections = validation.sections
+
+    uncited_by_model = sum(
+        1 for d in drafted if d.content and d.content.strip() and not d.evidence_refs
+    )
+
+    # 5. Output screen — the binding gate before anything reaches an RM (FR-015).
     findings = [
         f for s in sections if s.content for f in screen_text(s.content, section_key=s.section_key)
     ]
@@ -125,6 +147,7 @@ def execute_live_case(case: EvaluationCase, adapter) -> CaseOutcome:
             "case_id": case.case_id,
             "claim_count": len(ledger.claims),
             "section_count": len(sections),
+            "uncited_by_model": uncited_by_model,
             "blocked": blocked,
         },
     )
@@ -135,7 +158,13 @@ def execute_live_case(case: EvaluationCase, adapter) -> CaseOutcome:
         claims=ledger.claims,
         was_blocked=blocked,
         generation_refused=blocked,
+        uncited_by_model=uncited_by_model,
     )
+
+
+def template_required_keys(template: dict) -> list[str]:
+    """Section keys the template marks required, in template order."""
+    return [s["key"] for s in template["sections"] if s.get("required", True)]
 
 
 def _guidance(template: dict) -> str:

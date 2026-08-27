@@ -109,30 +109,72 @@ class TestReportRendering:
             assert case.case_id in report
 
 
+def _live_adapter() -> tuple[object, str]:
+    """Build the adapter for the configured provider, or skip.
+
+    Provider-aware rather than hardcoded to Anthropic. Grounding is the one guarantee
+    that is *not* provider-neutral — Anthropic supplies native citations, Gemini is
+    grounded by our own quote verification — so a baseline recorded against one
+    provider says nothing about the other. Measuring whichever provider is actually
+    configured is the only honest reading, and the baseline records which one it was.
+    """
+    import os
+
+    from app.config import get_settings
+
+    settings = get_settings()
+    provider = settings.model_provider
+
+    if provider == "gemini":
+        # Read through settings, not os.getenv: the key normally lives in .env, which
+        # pydantic-settings loads and the process environment does not have.
+        if not settings.gemini_api_key:
+            pytest.skip("MODEL_PROVIDER=gemini but GEMINI_API_KEY is unset.")
+        from app.adapters.gemini_adapter import GeminiAdapter
+
+        return GeminiAdapter(), settings.gemini_model_id
+
+    if provider == "demo":
+        pytest.skip(
+            "MODEL_PROVIDER=demo. The demo adapter is deterministic domain code, not a "
+            "model; measuring it would report the harness, not model behaviour."
+        )
+
+    # The Anthropic SDK also resolves an `ant auth login` profile, so an unset key is
+    # not proof of missing credentials — check the environment too before skipping.
+    if not (
+        settings.anthropic_api_key
+        or os.getenv("ANTHROPIC_API_KEY")
+        or os.getenv("ANTHROPIC_AUTH_TOKEN")
+    ):
+        pytest.skip("No Anthropic credentials. Set ANTHROPIC_API_KEY or run `ant auth login`.")
+
+    from app.adapters.anthropic_adapter import AnthropicAdapter
+
+    return AnthropicAdapter(), settings.model_id
+
+
 @pytest.mark.model
 class TestLiveModelGates:
     """The real measurement (task T122).
 
-    Runs the full pipeline against `AnthropicAdapter`. This is the only mode whose
-    numbers belong in BASELINE.md, and the only one that can tell us whether the
-    two-pass design holds against actual model behaviour.
+    Runs the full pipeline against whichever provider is configured. This is the only
+    mode whose numbers belong in BASELINE.md, and the only one that can tell us whether
+    the two-pass design holds against actual model behaviour.
     """
 
     def test_gates_pass_against_the_real_model(self, tmp_path):
-        """Run every case through the real AnthropicAdapter and enforce the gates.
+        """Run every case through the configured provider and enforce the gates.
 
         Writes the report to BASELINE.md. This is the number that belongs in the
         submission — everything else measures the harness, this measures the system.
         """
-        import os
-
-        if not (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")):
-            pytest.skip("No Anthropic credentials. Set ANTHROPIC_API_KEY or run `ant auth login`.")
-
-        from app.adapters.anthropic_adapter import AnthropicAdapter
+        from app.config import get_settings
         from tests.evaluation.live import execute_live_case
 
-        adapter = AnthropicAdapter()
+        adapter, model_id = _live_adapter()
+        provider = get_settings().model_provider
+
         run = run_evaluation(lambda case: execute_live_case(case, adapter), mode="live")
 
         report = render_report(run)
@@ -145,7 +187,8 @@ class TestLiveModelGates:
                     "# Grounding Evaluation Baseline",
                     "",
                     f"Recorded: {datetime.now(UTC).isoformat()}",
-                    f"Model: {os.getenv('MODEL_ID', 'claude-opus-5')}",
+                    f"Provider: {provider}",
+                    f"Model: {model_id}",
                     "",
                     "```",
                     report,

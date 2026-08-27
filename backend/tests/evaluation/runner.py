@@ -48,6 +48,12 @@ class CaseOutcome:
     generation_refused: bool = False
     error: str | None = None
 
+    # How many sections the model returned with content but no citation, which
+    # production validation then converted to gaps. `sections` above is the validated
+    # result — what an RM would actually receive — so this is recorded separately to
+    # keep the model's raw behaviour visible rather than silently corrected away.
+    uncited_by_model: int = 0
+
 
 @dataclass
 class EvaluationRun:
@@ -114,6 +120,24 @@ def run_evaluation(
     return run
 
 
+def _uncited_note(run: EvaluationRun) -> str:
+    """Report what validation had to correct, so a passing gate is not mistaken for a
+    perfect model.
+
+    Citation resolution is measured on validated output — what an RM actually receives.
+    Without this line, a model that wrote uncited prose in every section would score
+    100% and look flawless, because production converted each one to a gap. The gate is
+    about delivery; this number is about the model.
+    """
+    total = sum(o.uncited_by_model for o in run.outcomes)
+    if not total:
+        return "  model wrote no uncited content — nothing for validation to correct"
+    return (
+        f"  note: the model returned {total} section(s) with content but no citation; "
+        "validation converted each to a gap before it could reach an RM"
+    )
+
+
 def render_report(run: EvaluationRun) -> str:
     """Full report: per-metric summary, gates, and per-case detail."""
     lines = [
@@ -122,6 +146,7 @@ def render_report(run: EvaluationRun) -> str:
         "",
         run.fabrication.summary(),
         run.citations.summary(),
+        _uncited_note(run),
         run.gaps.summary(),
         run.screening.summary(),
         run.injection.summary(),
