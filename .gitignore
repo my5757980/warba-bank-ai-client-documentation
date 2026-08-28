@@ -48,3 +48,8 @@ Thumbs.db
 # Intermediate video frames — regenerate with scripts/build_video.py
 demo/build/
 demo/raw/
+
+# Scratch screenshots from browser-driven deployment sessions
+railway-*.png
+vercel-*.png
+live-*.png
