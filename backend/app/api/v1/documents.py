@@ -151,10 +151,39 @@ def create_document(
     if payload.meeting_notes:
         screen = screen_input(payload.meeting_notes)
         if screen.blocked:
+            from app.audit.recorder import AuditRecorder
             from app.documents.generation_service import ScreeningBlockedError
             from app.screening.vocabulary import get_vocabulary
 
-            raise ScreeningBlockedError(screen.findings, get_vocabulary().version)
+            vocabulary_version = get_vocabulary().version
+
+            # Record the refusal before raising.
+            #
+            # The output-side screen is audited inside GenerationService, but this one
+            # fires before that service is ever reached — so without this call, a draft
+            # refused on the RM's own input left no trace at all. "Show me every time
+            # the system refused a request" is the first question a compliance reviewer
+            # asks, and a partial answer is a wrong answer.
+            #
+            # Committed on its own: the raise below aborts the request, and an audit
+            # record that rolls back with the thing it was recording is not an audit
+            # record.
+            audit = AuditRecorder(db)
+            audit.screening_blocked(
+                actor_id=user.id,
+                actor_name=user.full_name,
+                client_reference=client.client_reference,
+                document_type=document_type.value,
+                detail={
+                    "stage": "rm_input",
+                    "rule_ids": sorted({f.rule_id for f in screen.findings if f.blocks}),
+                    "finding_count": len(screen.findings),
+                    "vocabulary_version": vocabulary_version,
+                },
+            )
+            db.commit()
+
+            raise ScreeningBlockedError(screen.findings, vocabulary_version)
 
     sources = build_sources(
         db,

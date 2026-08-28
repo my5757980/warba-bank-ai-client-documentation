@@ -19,7 +19,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.audit.chain import verify_chain
@@ -92,11 +92,19 @@ def list_events(
     if to:
         stmt = stmt.where(AuditEvent.occurred_at <= to)
 
-    events = db.execute(
-        stmt.order_by(AuditEvent.sequence.desc()).limit(limit).offset(offset)
-    ).scalars()
+    events = list(
+        db.execute(stmt.order_by(AuditEvent.sequence.desc()).limit(limit).offset(offset)).scalars()
+    )
 
-    return {"items": [_event_dict(e) for e in events], "total": len(list(events))}
+    # Materialise once. The previous version called `len(list(events))` on the same
+    # ScalarResult the list comprehension had already drained, so `total` was always 0 —
+    # a reviewer paging the trail would have been told there was nothing there.
+    #
+    # `total` is the count matching the filters, not the size of this page, so it is
+    # counted separately rather than derived from `events`.
+    total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
+
+    return {"items": [_event_dict(e) for e in events], "total": total}
 
 
 @router.get("/audit/documents/{document_id}/lifecycle")
