@@ -71,6 +71,21 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     log_level: str = "INFO"
 
+    # Browser origins allowed to call the API. Empty in development, where the wildcard
+    # applies instead; in production this is the only way an origin is permitted, so a
+    # deployed frontend must be named here explicitly. Comma-separated.
+    #
+    #     CORS_ALLOWED_ORIGINS=https://warba-docs.vercel.app
+    #
+    # Deliberately not defaulted to anything permissive: an unset value in production
+    # blocks every browser origin, which fails closed rather than silently exposing the
+    # API to any site that asks.
+    cors_allowed_origins: str = ""
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [o.strip() for o in self.cors_allowed_origins.split(",") if o.strip()]
+
     @field_validator("jwt_secret")
     @classmethod
     def _reject_placeholder_secret(cls, value: str) -> str:

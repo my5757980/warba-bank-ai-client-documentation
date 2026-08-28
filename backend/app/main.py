@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     # different port; a real deployment must name its origins explicitly.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if not settings.is_production else [],
+        allow_origins=settings.allowed_origins if settings.is_production else ["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

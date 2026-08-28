@@ -32,7 +32,15 @@ $$;
 -- .env.example as placeholders. Any real deployment supplies them from a secret
 -- manager (Constitution Principle I).
 
-GRANT CONNECT ON DATABASE warba_docs TO warba_app;
+-- Dynamic, because the database is not always called warba_docs. Locally it is; on a
+-- managed host the name is whatever the provider chose (Railway uses `railway`), and a
+-- hardcoded name fails the whole script there — taking the audit grant with it.
+DO $$
+BEGIN
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO warba_app', current_database());
+END
+$$;
+
 GRANT USAGE ON SCHEMA public TO warba_app;
 ALTER SCHEMA public OWNER TO warba_migrate;
 

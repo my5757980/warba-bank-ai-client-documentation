@@ -1,0 +1,22 @@
+# Keep the build context small and free of anything that must not reach an image.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Secrets. .env must never be baked into a layer — Railway supplies real values as
+# environment variables at run time.
+.env
+.env.*
+!.env.example
+
+# Not needed at run time.
+tests/
+exports/
+fixtures/uploads/
+*.md

@@ -11,7 +11,10 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
-    "pydantic>=2.9",
+    # [email] because auth.py uses EmailStr, which needs email-validator at import
+    # time. It was reaching the dev environment transitively; a clean install crashes
+    # on startup without it.
+    "pydantic[email]>=2.9",
     "pydantic-settings>=2.6",
     "sqlalchemy>=2.0.36",
     "alembic>=1.14",
@@ -23,7 +26,10 @@ dependencies = [
     "python-multipart>=0.0.12",
     "pyyaml>=6.0",
     "python-docx>=1.1",
-    "weasyprint>=63.0",
+    # NOTE: no weasyprint. PDF export is not implemented yet (export.py returns 501),
+    # and weasyprint pulls GTK/Cairo/Pango system libraries that roughly double the
+    # container image and are a common source of Linux build failures. Add it back in
+    # the same commit that actually implements PDF rendering.
 ]
 
 [project.optional-dependencies]
