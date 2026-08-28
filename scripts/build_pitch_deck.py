@@ -87,9 +87,9 @@ COVER = f"""
     <dt>Submitted by</dt><dd>Muhammad Yaseen — AI Engineer, K Com Solution</dd>
     <dt>Repository</dt><dd><a href="{REPO}">{REPO}</a></dd>
     <dt>Demo video</dt><dd>60-second walkthrough — {VIDEO_NOTE}</dd>
-    <dt>Status</dt><dd>Working prototype, end to end, on synthetic data · 247 tests</dd>
-    <dt>To run it</dt><dd>No API key needed — the repository ships in keyless demo mode.
-      Four commands in the README quick start. See §7.</dd>
+    <dt>Live app</dt><dd><a href="https://warba-bank-ai-client-documentation.vercel.app">warba-bank-ai-client-documentation.vercel.app</a><br/>
+      Sign in: <strong>sara.rm@warba.demo</strong> / <strong>Demo!2026</strong> — nothing to install.</dd>
+    <dt>Status</dt><dd>Deployed and running on synthetic data · 257 tests · 28 live end-to-end checks pass</dd>
   </dl>
 </section>
 """
@@ -124,6 +124,9 @@ body {
 .cover__meta dt { color: #9dbdb4; font-weight: 600; }
 .cover__meta dd { margin: 0; color: #fff; word-break: break-word; }
 .cover__meta a { color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.35); }
+/* The shared `strong` rule paints near-black, which is invisible on this dark cover —
+   and the sign-in credentials are the one thing a reviewer must be able to read. */
+.cover__meta strong { color: #f0c94a; font-weight: 650; }
 
 .page-break { break-after: page; }
 

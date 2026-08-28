@@ -3,10 +3,23 @@
 ## AI-Powered Client Documentation
 
 **Track**: 1 — AI-Powered Client Documentation
-**Status**: Working prototype, end-to-end, on synthetic data
+**Status**: Deployed and running, end-to-end, on synthetic data
 **Submitted by**: Muhammad Yaseen ([@my5757980](https://github.com/my5757980))
+
+### Try it now
+
+**Live application: https://warba-bank-ai-client-documentation.vercel.app**
+Sign in as `sara.rm@warba.demo` with password `Demo!2026`, pick **Al-Sabah Trading
+Company**, paste any meeting notes, and generate. No setup, no API key, nothing to install.
+
+To watch the Shariah gate refuse a draft, include a phrase like *"conventional term loan
+at a fixed interest rate"* — the request is refused with the specific rule IDs, and no
+document is created.
+
 **Repository**: https://github.com/my5757980/warba-bank-ai-client-documentation
-**Demo video**: [60-second walkthrough of the running system](./demo/warba-client-documentation.mp4) — real application, real database, real model call; nothing mocked or staged
+**API**: https://warba-bank-ai-client-documentation-production.up.railway.app
+**Demo video**: [60-second walkthrough](./demo/warba-client-documentation.mp4) — the real
+application, real database, real model call; nothing mocked or staged.
 
 **Where to look**: [`specs/001-ai-client-documentation/`](./specs/001-ai-client-documentation/) (specification, research, plan, tasks) · [`backend/`](./backend/) · [`frontend/`](./frontend/) · §7 below is a guided tour of the repository.
 
@@ -23,7 +36,7 @@ this submission does not ask to be read as though it were. What I would put forw
 instead is the artifact itself, because it is checkable in a way a CV is not:
 
 - **The whole system is public and runnable.** Repository, specification, research notes,
-  architecture decisions, and 247 tests. Clone it and run it — the quick start is four
+  architecture decisions, and 257 tests. Clone it and run it — the quick start is four
   commands.
 - **The hard guarantees are enforced by code, not asserted in prose.** Audit immutability
   is a database privilege. Synthetic-only data is a CHECK constraint. Provider portability
@@ -342,6 +355,25 @@ Two smaller items:
 ---
 
 ## 7. Repository guide
+
+### It is deployed, and the deployment refuses to start unsafely
+
+The live link on the cover page is the system described in this document, running against
+a managed PostgreSQL instance with Google Gemini behind the generation port. Frontend on
+Vercel, backend and database on Railway.
+
+One detail is worth stating, because it is the deployment expressing the same principle
+as the rest of the system. The container's entrypoint provisions the database roles, runs
+migrations, re-applies the audit grant — and then **verifies** that the application role
+holds no `UPDATE`, `DELETE`, or `TRUNCATE` on `audit_event`. If that check fails it exits
+non-zero and the API never serves traffic. An API whose audit trail is editable should not
+accept requests, and "we believe the grant was applied" is not a control.
+
+Verified against the live deployment, end to end: 28 checks covering authentication,
+portfolio scoping, cross-portfolio refusal, generation, citation resolution against real
+source text, gap marking, the Shariah gate (blocking *and* correctly not blocking a
+compliant draft), all four approval preconditions, DOCX export, the audit trail, and hash
+chain validity. All 28 pass.
 
 ### Running it yourself — no API key needed
 
